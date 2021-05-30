@@ -5,7 +5,6 @@ const headers = {
   "Access-Control-Allow-Origin": "https://roamresearch.com",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE",
 };
-
 export const handler: APIGatewayProxyHandler = async (event) => {
   const data = JSON.parse(event.body || "{}");
   return axios
