@@ -20,5 +20,5 @@ jobs:
         with:
           token: ${{ secrets.ROAMJS_DEVELOPER_TOKEN }}
           source: build
-          path: google-drive
+          path: google
           release_token: ${{ secrets.ROAMJS_RELEASE_TOKEN }}
