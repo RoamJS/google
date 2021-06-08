@@ -6,6 +6,9 @@ on:
       - "src/**"
       - ".github/workflows/main.yaml"
 
+env:
+  GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
