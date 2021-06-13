@@ -5,7 +5,7 @@ import GoogleLogo from "./assets/Google.svg";
 
 const scopes = [
   "calendar.readonly",
-  "calendar.events.readonly",
+  "calendar.events",
   "userinfo.email",
   "drive.file",
 ]
