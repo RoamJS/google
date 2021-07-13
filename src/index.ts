@@ -13,7 +13,7 @@ const scopes = [
   .join("%20");
 
 createConfigObserver({
-  title: toConfig('google'),
+  title: toConfig("google"),
   config: {
     tabs: [
       {
@@ -28,9 +28,9 @@ createConfigObserver({
                 Promise.resolve(
                   `https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=https://roamjs.com/oauth?auth=true&response_type=code&scope=${scopes}`
                 ),
-              getAuthData: (data) =>
+              getAuthData: (data: string) =>
                 axios
-                  .post(`https://lambda.roamjs.com/google-auth`, {
+                  .post(`${process.env.API_URL}/google-auth`, {
                     ...JSON.parse(data),
                     grant_type: "authorization_code",
                   })

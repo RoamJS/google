@@ -8,6 +8,7 @@ on:
 
 env:
   GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+  API_URL: https://lambda.roamjs.com
 
 jobs:
   deploy:
