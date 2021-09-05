@@ -1,4 +1,4 @@
-name: Publish Lambda
+name: Publish Lambda to Main
 on:
   push:
     branches: main
