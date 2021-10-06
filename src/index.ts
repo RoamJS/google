@@ -42,5 +42,6 @@ createConfigObserver({
         ],
       },
     ],
+    versioning: true,
   },
 });
