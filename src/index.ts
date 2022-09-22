@@ -1,7 +1,11 @@
-import { toConfig } from "roam-client";
-import { createConfigObserver } from "roamjs-components";
+import React from "react";
 import axios from "axios";
 import GoogleLogo from "./assets/Google.svg";
+import runExtension from "roamjs-components/util/runExtension";
+import OauthPanel from "./components/OauthPanel";
+import loadGoogleDrive from "./services/drive";
+import loadGoogleCalendar, { DEFAULT_FORMAT } from "./services/calendar";
+import CalendarConfig from "./components/CalendarConfig";
 
 const scopes = [
   "calendar.readonly",
@@ -12,36 +16,86 @@ const scopes = [
   .map((s) => `https://www.googleapis.com/auth/${s}`)
   .join("%20");
 
-createConfigObserver({
-  title: toConfig("google"),
-  config: {
-    tabs: [
-      {
-        id: "home",
-        fields: [
-          {
-            title: "oauth",
-            type: "oauth",
-            options: {
-              service: "google",
-              getPopoutUrl: () =>
-                Promise.resolve(
-                  `https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=https://roamjs.com/oauth?auth=true&response_type=code&scope=${scopes}`
-                ),
-              getAuthData: (data: string) =>
-                axios
-                  .post(`${process.env.API_URL}/google-auth`, {
-                    ...JSON.parse(data),
-                    grant_type: "authorization_code",
-                  })
-                  .then((r) => r.data),
-              ServiceIcon: GoogleLogo,
-            },
-            description: "Log into Google to connect to your account to Roam!",
+runExtension({
+  run: (args) => {
+    args.extensionAPI.settings.panel.create({
+      tabTitle: "Google",
+      settings: [
+        {
+          id: "oauth",
+          name: "Log In",
+          description: "Log into Google to connect to your account to Roam!",
+          action: {
+            type: "reactComponent",
+            component: () =>
+              React.createElement(OauthPanel, {
+                service: "google",
+                getPopoutUrl: () =>
+                  Promise.resolve(
+                    `https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=https://roamjs.com/oauth?auth=true&response_type=code&scope=${scopes}`
+                  ),
+                getAuthData: (data: string) =>
+                  axios
+                    .post(`${process.env.API_URL}/google-auth`, {
+                      ...JSON.parse(data),
+                      grant_type: "authorization_code",
+                    })
+                    .then((r) => r.data),
+                ServiceIcon: GoogleLogo,
+              }),
           },
-        ],
-      },
-    ],
-    versioning: true,
+        },
+        {
+          id: "calendars",
+          name: "Linked Calendar",
+          description:
+            'The calendar ids to import events from. To find your calendar id, go to your calendar settings and scroll down to "Integrate Calendar".',
+          action: {
+            type: "reactComponent",
+            component: () => React.createElement(CalendarConfig, args),
+          },
+        },
+        {
+          action: { type: "input", placeholder: DEFAULT_FORMAT },
+          id: "event-format",
+          description:
+            "The format each calender event should output in when imported into Roam.",
+          name: "Calendar Event Format",
+        },
+        {
+          action: { type: "input", placeholder: "meeting" },
+          id: "event-filter",
+          name: "Calendar Event Filter",
+          description:
+            "A regex to filter your imported calendar events by summary or description.",
+        },
+        {
+          action: {
+            type: "switch",
+          },
+          id: "skip-free",
+          name: "Skip Free Events",
+          description:
+            "Whether or not to filter out events marked as 'free' during Google Calendar import.",
+        },
+        {
+          id: "upload-folder",
+          name: "Upload Folder",
+          action: {
+            type: "input",
+            placeholder: "RoamJS",
+          },
+          description:
+            "The default Google Drive folder location to send uploads to",
+        },
+      ],
+    });
+    const unloadGoogleCalendar = loadGoogleCalendar(args);
+    const unloadGoogleDrive = loadGoogleDrive(args);
+    return {
+      domListeners: unloadGoogleDrive.domListeners,
+      commands: unloadGoogleCalendar.commands,
+      unload: unloadGoogleCalendar.unload,
+    };
   },
 });

@@ -18,11 +18,6 @@ jobs:
       - name: install
         run: npm install
       - name: build
-        run: npm run build 
-      - name: RoamJS Publish
-        uses: dvargas92495/roamjs-publish@0.2.5
-        with:
-          token: ${{ secrets.ROAMJS_DEVELOPER_TOKEN }}
-          source: build
-          path: google
-          release_token: ${{ secrets.ROAMJS_RELEASE_TOKEN }}
+        run: npm run build --depot
+      - name: publish
+        run: npm run publish --depot
