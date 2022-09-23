@@ -1,11 +1,14 @@
 import React from "react";
-import axios from "axios";
 import GoogleLogo from "./assets/Google.svg";
 import runExtension from "roamjs-components/util/runExtension";
-import OauthPanel from "./components/OauthPanel";
-import loadGoogleDrive from "./services/drive";
-import loadGoogleCalendar, { DEFAULT_FORMAT } from "./services/calendar";
+import OauthPanel from "roamjs-components/components/OauthPanel";
+import apiPost from "roamjs-components/util/apiPost";
 import CalendarConfig from "./components/CalendarConfig";
+import loadGoogleCalendar, { DEFAULT_FORMAT } from "./services/calendar";
+import loadGoogleDrive from "./services/drive";
+
+// Remove unnecessary deps (axios)
+// Edit docs
 
 const scopes = [
   "calendar.readonly",
@@ -35,12 +38,14 @@ runExtension({
                     `https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=https://roamjs.com/oauth?auth=true&response_type=code&scope=${scopes}`
                   ),
                 getAuthData: (data: string) =>
-                  axios
-                    .post(`${process.env.API_URL}/google-auth`, {
+                  apiPost({
+                    anonymous: true,
+                    path: "google-auth",
+                    data: {
                       ...JSON.parse(data),
                       grant_type: "authorization_code",
-                    })
-                    .then((r) => r.data),
+                    },
+                  }),
                 ServiceIcon: GoogleLogo,
               }),
           },

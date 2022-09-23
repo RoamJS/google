@@ -21,7 +21,7 @@ import type {
   PullBlock,
   RoamBasicNode,
 } from "roamjs-components/types/native";
-import axios from "axios";
+import apiGet from "roamjs-components/util/apiGet";
 import formatRFC3339 from "date-fns/formatRFC3339";
 import startOfDay from "date-fns/startOfDay";
 import endOfDay from "date-fns/endOfDay";
@@ -226,24 +226,19 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
         getAccessToken(account)
           .then((Authorization) =>
             Authorization
-              ? axios
-                  .get<{
-                    items: Event[];
-                  }>(
-                    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
-                      calendar
-                    )}/events?timeMin=${timeMinParam}&timeMax=${timeMaxParam}&orderBy=startTime&singleEvents=true`,
-                    {
-                      headers: {
-                        Authorization: `Bearer ${Authorization}`,
-                      },
-                    }
-                  )
-                  .then((r) => ({
-                    items: r.data.items,
-                    calendar,
-                    error: "",
-                  }))
+              ? apiGet<{
+                  items: Event[];
+                }>({
+                  authorization: `Bearer ${Authorization}`,
+                  domain: "https://www.googleapis.com",
+                  path: `calendar/v3/calendars/${encodeURIComponent(
+                    calendar
+                  )}/events?timeMin=${timeMinParam}&timeMax=${timeMaxParam}&orderBy=startTime&singleEvents=true`,
+                }).then((r) => ({
+                  items: r.items,
+                  calendar,
+                  error: "",
+                }))
               : Promise.resolve({
                   items: [] as Event[],
                   calendar,
@@ -418,13 +413,13 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
             const text = getTextByBlockUid(blockUid);
             const eventId = GCAL_EVENT_REGEX.exec(text)?.[1];
             const edit = atob(eventId).split(" ")[0];
-            return axios
-              .get(
-                `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
-                  c.calendar
-                )}/events/${edit}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-              )
+            return apiGet({
+              domain: `https://www.googleapis.com`,
+              path: `calendar/v3/calendars/${encodeURIComponent(
+                c.calendar
+              )}/events/${edit}`,
+              authorization: `Bearer ${token}`,
+            })
               .then((r) => ({ data: r.data, calendar: c }))
               .catch(() => undefined);
           })
@@ -470,13 +465,13 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
               const text = getTextByBlockUid(blockUid);
               const eventId = GCAL_EVENT_REGEX.exec(text)?.[1];
               const edit = atob(eventId).split(" ")[0];
-              return axios
-                .get(
-                  `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
-                    c.calendar
-                  )}/events/${edit}`,
-                  { headers: { Authorization: `Bearer ${token}` } }
-                )
+              return apiGet({
+                domain: `https://www.googleapis.com`,
+                path: `calendar/v3/calendars/${encodeURIComponent(
+                  c.calendar
+                )}/events/${edit}`,
+                authorization: `Bearer ${token}`,
+              })
                 .then((r) => ({ data: r.data, calendar: c }))
                 .catch(() => undefined);
             })

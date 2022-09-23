@@ -1,4 +1,3 @@
-import axios from "axios";
 import GoogleDriveButton from "../components/GoogleDriveButton";
 import createButtonObserver from "roamjs-components/dom/createButtonObserver";
 import mime from "mime-types";
@@ -10,6 +9,9 @@ import { OnloadArgs } from "roamjs-components/types";
 import createHTMLObserver from "roamjs-components/dom/createHTMLObserver";
 import createBlock from "roamjs-components/writes/createBlock";
 import getDropUidOffset from "roamjs-components/dom/getDropUidOffset";
+import apiGet from "roamjs-components/util/apiGet";
+import apiPost from "roamjs-components/util/apiPost";
+import apiPut from "roamjs-components/util/apiPut";
 
 const CHUNK_MAX = 256 * 1024;
 
@@ -34,48 +36,46 @@ const uploadToDrive = async ({
     getAccessToken()
       .then(([uid, Authorization]) => {
         if (Authorization)
-          return axios
-            .get(
-              `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
-                "mimeType='application/vnd.google-apps.folder'"
-              )}`,
-              { headers: { Authorization: `Bearer ${Authorization}` } }
-            )
+          return apiGet<{ files: { name: string; id: string }[] }>({
+            domain: `https://www.googleapis.com`,
+            path: `drive/v3/files?q=${encodeURIComponent(
+              "mimeType='application/vnd.google-apps.folder'"
+            )}`,
+            authorization: `Bearer ${Authorization}`,
+          })
             .then((r) => {
-              const id = r.data.files.find(
-                (f: { name: string; id: string }) => f.name === folder
-              )?.id;
+              const id = r.files.find((f) => f.name === folder)?.id;
               if (id) {
                 return id;
               }
-              return axios
-                .post(
-                  `https://www.googleapis.com/drive/v3/files`,
-                  {
-                    name: folder,
-                    mimeType: "application/vnd.google-apps.folder",
-                  },
-                  { headers: { Authorization: `Bearer ${Authorization}` } }
-                )
-                .then((r) => r.data.id);
+              return apiPost<{ id: string }>({
+                domain: `https://www.googleapis.com`,
+                path: `drive/v3/files`,
+                data: {
+                  name: folder,
+                  mimeType: "application/vnd.google-apps.folder",
+                },
+                authorization: `Bearer ${Authorization}`,
+              }).then((r) => r.id);
             })
             .then((folderId) =>
-              axios
-                .post(
-                  `${process.env.API_URL}/google-drive`,
-                  {
-                    operation: "INIT",
-                    data: {
-                      contentType,
-                      contentLength,
-                      name: fileToUpload.name,
-                      folderId,
-                    },
-                  },
-                  { headers: { Authorization } }
-                )
+              apiPost<{ headers: { location: string } }>({
+                domain: `https://www.googleapis.com`,
+                path: `upload/drive/v3/files?uploadType=resumable&access_token=${Authorization}`,
+                data: { name: fileToUpload.name, parents: [folderId] },
+                headers: {
+                  "X-Upload-Content-Type": contentType,
+                  "X-Upload-Content-Length": `${contentLength}`,
+                  "Content-Type": "application/json",
+                  "Content-Length": "0",
+                },
+                anonymous: true,
+              })
                 .then((r) => {
-                  const { location } = r.data;
+                  const { location } = r.headers;
+                  const locationParts = location.split("/");
+                  const domain = locationParts.slice(0, -1).join("/");
+                  const path = locationParts.slice(-1)[0];
                   const upload = (start: number): Promise<{ id: string }> => {
                     updateBlock({
                       uid,
@@ -88,30 +88,38 @@ const uploadToDrive = async ({
                     reader.readAsArrayBuffer(fileToUpload.slice(start, end));
                     return new Promise((resolve, reject) => {
                       reader.onloadend = () => {
-                        axios
-                          .post(
-                            `${process.env.API_URL}/google-drive`,
-                            {
-                              operation: "UPLOAD",
-                              data: {
-                                chunk: Array.from(
-                                  new Uint8Array(reader.result as ArrayBuffer)
-                                ),
-                                uri: location,
-                                contentLength: end - start,
-                                contentRange: `bytes ${start}-${
-                                  end - 1
-                                }/${contentLength}`,
-                              },
-                            },
-                            { headers: { Authorization } }
-                          )
+                        const buf = new Uint8Array(
+                          reader.result as ArrayBuffer
+                        );
+                        apiPut<{
+                          status: 308 | 200;
+                          headers: { range: string };
+                          id: string;
+                          mimeType: string;
+                        }>({
+                          domain,
+                          path: `${path}&access_token=${Authorization}`,
+                          data: buf,
+                          headers: {
+                            contentLength: (end - start).toString(),
+                            contentRange: `bytes ${start}-${
+                              end - 1
+                            }/${contentLength}`,
+                          },
+                          anonymous: true,
+                        })
                           .then((r) =>
-                            r.data.done
-                              ? resolve({
-                                  id: r.data.id,
-                                })
-                              : resolve(upload(r.data.start))
+                            r.status === 308
+                              ? resolve(
+                                  upload(
+                                    Number(
+                                      r.headers?.range.replace(/^bytes=0-/, "")
+                                    ) + 1
+                                  )
+                                )
+                              : r.status === 200
+                              ? resolve({ id: r.id })
+                              : reject(r)
                           )
                           .catch(reject);
                       };
@@ -153,9 +161,7 @@ const uploadToDrive = async ({
           createBlock({
             parentUid: uid,
             node: {
-              text: e.response?.data
-                ? JSON.stringify(e.response.data)
-                : e.message || "Unknown Error",
+              text: e ? JSON.stringify(e) : "Unknown Error",
             },
           });
         }
