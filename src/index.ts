@@ -6,8 +6,8 @@ import apiPost from "roamjs-components/util/apiPost";
 import CalendarConfig from "./components/CalendarConfig";
 import loadGoogleCalendar, { DEFAULT_FORMAT } from "./services/calendar";
 import loadGoogleDrive from "./services/drive";
+import migrateLegacySettings from "roamjs-components/util/migrateLegacySettings";
 
-// Remove unnecessary deps (axios)
 // Edit docs
 
 const scopes = [
@@ -19,8 +19,10 @@ const scopes = [
   .map((s) => `https://www.googleapis.com/auth/${s}`)
   .join("%20");
 
-runExtension({
+export default runExtension({
   run: (args) => {
+    const toggleGoogleCalendar = loadGoogleCalendar(args);
+    const toggleGoogleDrive = loadGoogleDrive(args);
     args.extensionAPI.settings.panel.create({
       tabTitle: "Google",
       settings: [
@@ -52,7 +54,7 @@ runExtension({
         },
         {
           id: "calendars",
-          name: "Linked Calendar",
+          name: "Linked Calendars",
           description:
             'The calendar ids to import events from. To find your calendar id, go to your calendar settings and scroll down to "Integrate Calendar".',
           action: {
@@ -84,6 +86,16 @@ runExtension({
             "Whether or not to filter out events marked as 'free' during Google Calendar import.",
         },
         {
+          id: "drive-enabled",
+          name: "Intercept Uploads to Drive",
+          description:
+            "Whether or not to intercept file uploads and send them to your google drive instead of Roam.",
+          action: {
+            type: "switch",
+            onChange: (e) => toggleGoogleDrive(e.target.checked),
+          },
+        },
+        {
           id: "upload-folder",
           name: "Upload Folder",
           action: {
@@ -95,12 +107,14 @@ runExtension({
         },
       ],
     });
-    const unloadGoogleCalendar = loadGoogleCalendar(args);
-    const unloadGoogleDrive = loadGoogleDrive(args);
+
+    toggleGoogleCalendar(true);
+    toggleGoogleDrive(!!args.extensionAPI.settings.get("drive-enabled"));
     return {
-      domListeners: unloadGoogleDrive.domListeners,
-      commands: unloadGoogleCalendar.commands,
-      unload: unloadGoogleCalendar.unload,
+      unload: () => {
+        toggleGoogleCalendar(false);
+        toggleGoogleDrive(false);
+      },
     };
   },
 });

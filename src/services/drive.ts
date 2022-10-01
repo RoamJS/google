@@ -1,6 +1,5 @@
 import GoogleDriveButton from "../components/GoogleDriveButton";
 import createButtonObserver from "roamjs-components/dom/createButtonObserver";
-import mime from "mime-types";
 import getAccessToken from "../utils/getAccessToken";
 import { createComponentRender } from "roamjs-components/components/ComponentContainer";
 import updateBlock from "roamjs-components/writes/updateBlock";
@@ -12,6 +11,21 @@ import getDropUidOffset from "roamjs-components/dom/getDropUidOffset";
 import apiGet from "roamjs-components/util/apiGet";
 import apiPost from "roamjs-components/util/apiPost";
 import apiPut from "roamjs-components/util/apiPut";
+import mimeTypes from "../utils/mimeTypes";
+
+const mimeLookup = (path: string) => {
+  if (!path || typeof path !== "string") {
+    return false;
+  }
+
+  const extension = path.split(".").slice(-1)[0];
+
+  if (!extension) {
+    return false;
+  }
+
+  return mimeTypes[extension] || false;
+};
 
 const CHUNK_MAX = 256 * 1024;
 
@@ -29,12 +43,12 @@ const uploadToDrive = async ({
   const fileToUpload = files[0];
   if (fileToUpload) {
     const contentType =
-      mime.lookup(fileToUpload.name) || "application/octet-stream";
+      mimeLookup(fileToUpload.name) || "application/octet-stream";
     const contentLength = fileToUpload.size;
     const folder = extensionAPI.settings.get("upload-folder") || "RoamJS";
     const uid = await getLoadingUid();
     getAccessToken()
-      .then(([uid, Authorization]) => {
+      .then((Authorization) => {
         if (Authorization)
           return apiGet<{ files: { name: string; id: string }[] }>({
             domain: `https://www.googleapis.com`,
@@ -180,90 +194,102 @@ const textareaRef: { current: HTMLTextAreaElement } = {
   current: null,
 };
 
+let observers = new Set<MutationObserver>();
+let documentClickListeners = new Set<(e: MouseEvent) => void>();
+
 const loadGoogleDrive = (args: OnloadArgs) => {
-  createHTMLObserver({
-    tag: "DIV",
-    className: "dnd-drop-area",
-    callback: (d: HTMLDivElement) => {
-      d.addEventListener("drop", (e) => {
-        uploadToDrive({
-          extensionAPI: args.extensionAPI,
-          files: e.dataTransfer.files,
-          getLoadingUid: () => {
-            const { parentUid, offset } = getDropUidOffset(d);
-            return createBlock({
-              parentUid,
-              order: offset,
-              node: { text: "Loading..." },
+  return (enabled: boolean) => {
+    if (enabled) {
+      observers.add(
+        createHTMLObserver({
+          tag: "DIV",
+          className: "dnd-drop-area",
+          callback: (d: HTMLDivElement) => {
+            d.addEventListener("drop", (e) => {
+              uploadToDrive({
+                extensionAPI: args.extensionAPI,
+                files: e.dataTransfer.files,
+                getLoadingUid: () => {
+                  const { parentUid, offset } = getDropUidOffset(d);
+                  return createBlock({
+                    parentUid,
+                    order: offset,
+                    node: { text: "Loading..." },
+                  });
+                },
+                e,
+              });
             });
           },
-          e,
-        });
-      });
-    },
-  });
-
-  createHTMLObserver({
-    tag: "TEXTAREA",
-    className: "rm-block-input",
-    callback: (t: HTMLTextAreaElement) => {
-      textareaRef.current = t;
-      t.addEventListener("paste", (e) => {
-        uploadToDrive({
-          extensionAPI: args.extensionAPI,
-          files: e.clipboardData.files,
-          getLoadingUid: () => {
-            const { blockUid } = getUids(t);
-            return updateBlock({
-              text: "Loading...",
-              uid: blockUid,
+        })
+      );
+      observers.add(
+        createHTMLObserver({
+          tag: "TEXTAREA",
+          className: "rm-block-input",
+          callback: (t: HTMLTextAreaElement) => {
+            textareaRef.current = t;
+            t.addEventListener("paste", (e) => {
+              uploadToDrive({
+                extensionAPI: args.extensionAPI,
+                files: e.clipboardData.files,
+                getLoadingUid: () => {
+                  const { blockUid } = getUids(t);
+                  return updateBlock({
+                    text: "Loading...",
+                    uid: blockUid,
+                  });
+                },
+                e,
+              });
             });
           },
-          e,
-        });
-      });
-    },
-  });
+        })
+      );
 
-  const clickListener = (e: MouseEvent) => {
-    const target = e.target as HTMLInputElement;
-    if (
-      target.tagName === "INPUT" &&
-      target.parentElement === document.body &&
-      target.type === "file"
-    ) {
-      target.addEventListener(
-        "change",
-        (e) => {
-          uploadToDrive({
-            extensionAPI: args.extensionAPI,
-            files: (e.target as HTMLInputElement).files,
-            getLoadingUid: () => {
-              const { blockUid } = getUids(textareaRef.current);
-              return updateBlock({
-                text: "Loading...",
-                uid: blockUid,
+      const clickListener = (e: MouseEvent) => {
+        const target = e.target as HTMLInputElement;
+        if (
+          target.tagName === "INPUT" &&
+          target.parentElement === document.body &&
+          target.type === "file"
+        ) {
+          target.addEventListener(
+            "change",
+            (e) => {
+              uploadToDrive({
+                extensionAPI: args.extensionAPI,
+                files: (e.target as HTMLInputElement).files,
+                getLoadingUid: () => {
+                  const { blockUid } = getUids(textareaRef.current);
+                  return updateBlock({
+                    text: "Loading...",
+                    uid: blockUid,
+                  });
+                },
+                e,
               });
             },
-            e,
-          });
-        },
-        { capture: true }
+            { capture: true }
+          );
+        }
+      };
+      document.addEventListener("click", clickListener);
+      documentClickListeners.add(clickListener);
+
+      observers.add(
+        createButtonObserver({
+          shortcut: "gdrive",
+          attribute: "google-drive",
+          render: createComponentRender(GoogleDriveButton),
+        })
+      );
+    } else {
+      observers.forEach((o) => o.disconnect());
+      documentClickListeners.forEach((l) =>
+        document.removeEventListener("click", l)
       );
     }
-  };
-  document.addEventListener("click", clickListener);
-
-  createButtonObserver({
-    shortcut: "gdrive",
-    attribute: "google-drive",
-    render: createComponentRender(GoogleDriveButton),
-  });
-
-  return {
-    domListeners: [
-      { el: document, type: "click" as const, listener: clickListener },
-    ],
   };
 };
 

@@ -18,6 +18,6 @@ jobs:
       - name: install
         run: npm install
       - name: build
-        run: npm run build --depot
+        run: npx roamjs-scripts build --depot
       - name: publish
-        run: npm run publish --depot
+        run: npx roamjs-scripts publish --depot

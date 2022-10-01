@@ -3,3 +3,5 @@ build
 dist
 out
 .env.local
+.env
+extension.js

@@ -1,5 +1,4 @@
 import { Button, Card, Spinner } from "@blueprintjs/core";
-import axios from "axios";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import getAccessToken from "../utils/getAccessToken";
 import setInputSetting from "roamjs-components/util/setInputSetting";
@@ -7,26 +6,26 @@ import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
 import getSettingIntFromTree from "roamjs-components/util/getSettingIntFromTree";
 import { Resizable } from "react-resizable";
+import apiGet from "roamjs-components/util/apiGet";
 
 type Props = {
   blockUid: string;
 };
-
 const useSrc = ({ id, mimeType }: { id: string; mimeType: string }) => {
   const [src, setSrc] = useState("");
   useEffect(() => {
     getAccessToken().then((token) =>
-      axios
-        .get(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, {
-          headers: { Authorization: `Bearer ${token}` },
-          responseType: "arraybuffer",
-        })
-        .then((r) => {
-          const u8 = new Uint8Array(r.data);
-          let b64encoded = "";
-          u8.forEach((u) => (b64encoded += String.fromCharCode(u)));
-          setSrc(`data:${mimeType};base64,${btoa(b64encoded)}`);
-        })
+      apiGet<ArrayBuffer>({
+        domain: `https://www.googleapis.com`,
+        authorization: `Bearer ${token}`,
+        path: `drive/v3/files/${id}?alt=media`,
+        buffer: true,
+      }).then((r) => {
+        const u8 = new Uint8Array(r);
+        let b64encoded = "";
+        u8.forEach((u) => (b64encoded += String.fromCharCode(u)));
+        setSrc(`data:${mimeType};base64,${btoa(b64encoded)}`);
+      })
     );
   }, [setSrc, mimeType, id]);
   return src;
@@ -136,17 +135,15 @@ const GoogleDriveButton = ({ blockUid }: Props) => {
   );
   useEffect(() => {
     getAccessToken().then((token) => {
-      axios
-        .get(
-          `https://www.googleapis.com/drive/v3/files/${id}?fields=webViewLink,name,mimeType`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        )
+      apiGet({
+        domain: `https://www.googleapis.com`,
+        path: `drive/v3/files/${id}?fields=webViewLink,name,mimeType`,
+        authorization: `Bearer ${token}`,
+      })
         .then((r) => {
-          setName(r.data.name || "Unknown File");
-          setLink(r.data.webViewLink);
-          setMimeType(r.data.mimeType);
+          setName(r.name || "Unknown File");
+          setLink(r.webViewLink);
+          setMimeType(r.mimeType);
         })
         .catch((e) => {
           setName("Unknown File");

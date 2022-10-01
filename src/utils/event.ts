@@ -7,7 +7,7 @@ const DEFAULT_DATE_FORMAT = "hh:mm a";
 export type Event = {
   transparency: "transparent" | "opaque";
   summary: string;
-  descripton?: string;
+  description?: string;
   htmlLink: string;
   hangoutLink: string;
   location: string;

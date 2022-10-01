@@ -16,7 +16,6 @@ import format from "date-fns/format";
 import parse from "date-fns/parse";
 import formatRFC3339 from "date-fns/formatRFC3339";
 import getAccessToken from "../utils/getAccessToken";
-import axios from "axios";
 import type { RoamBasicNode } from "roamjs-components/types/native";
 import createBlock from "roamjs-components/writes/createBlock";
 import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
@@ -25,6 +24,9 @@ import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBloc
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import updateBlock from "roamjs-components/writes/updateBlock";
 import addYears from "date-fns/addYears";
+import apiPut from "roamjs-components/util/apiPut";
+import apiPost from "roamjs-components/util/apiPost";
+import type { Event } from "../utils/event";
 
 type Props = {
   summary: string;
@@ -80,6 +82,8 @@ const CreateEventDialog = ({
       canEscapeKeyClose
       canOutsideClickClose
       title={`${edit ? "Update" : "Create"} Google Calendar Event`}
+      enforceFocus={false}
+      autoFocus={false}
     >
       <div className={Classes.DIALOG_BODY}>
         <Label>
@@ -163,24 +167,26 @@ const CreateEventDialog = ({
                     calendarIds.find((c) => c.calendar === calendarId)?.account
                   ).then((token) => {
                     if (token) {
-                      axios[edit ? "put" : "post"](
-                        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
-                          calendarId
-                        )}/events${edit ? `/${edit}` : ""}`,
-                        {
+                      const args = {
+                        data: {
                           summary: summaryState,
                           description: descriptionState,
                           location: locationState,
                           start: { dateTime: formatRFC3339(startState) },
                           end: { dateTime: formatRFC3339(endState) },
                         },
-                        { headers: { Authorization: `Bearer ${token}` } }
-                      )
+                        authorization: `Bearer ${token}`,
+                        domain: "https://www.googleapis.com",
+                        path: `calendar/v3/calendars/${encodeURIComponent(
+                          calendarId
+                        )}/events${edit ? `/${edit}` : ""}`,
+                      };
+                      (edit ? apiPut<Event>(args) : apiPost<Event>(args))
                         .then((r) => {
                           if (!edit) {
                             createBlock({
                               parentUid: blockUid,
-                              node: { text: `Link:: ${r.data.htmlLink}` },
+                              node: { text: `Link:: ${r.htmlLink}` },
                             });
                           } else {
                             const blockText = getTextByBlockUid(blockUid);
@@ -193,9 +199,9 @@ const CreateEventDialog = ({
                                 );
                             const updateNode = (n: RoamBasicNode) => {
                               const newText = n.text
-                                .replace(summary, r.data.summary)
-                                .replace(description, r.data.description)
-                                .replace(location, r.data.location);
+                                .replace(summary, r.summary)
+                                .replace(description, r.description)
+                                .replace(location, r.location);
                               if (newText !== n.text) {
                                 updateBlock({ text: newText, uid: n.uid });
                               }
