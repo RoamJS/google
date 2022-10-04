@@ -6,9 +6,6 @@ import apiPost from "roamjs-components/util/apiPost";
 import CalendarConfig from "./components/CalendarConfig";
 import loadGoogleCalendar, { DEFAULT_FORMAT } from "./services/calendar";
 import loadGoogleDrive from "./services/drive";
-import migrateLegacySettings from "roamjs-components/util/migrateLegacySettings";
-
-// Edit docs
 
 const scopes = [
   "calendar.readonly",

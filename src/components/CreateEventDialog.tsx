@@ -19,7 +19,6 @@ import getAccessToken from "../utils/getAccessToken";
 import type { RoamBasicNode } from "roamjs-components/types/native";
 import createBlock from "roamjs-components/writes/createBlock";
 import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
-import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBlockUid";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import updateBlock from "roamjs-components/writes/updateBlock";
@@ -34,7 +33,7 @@ type Props = {
   description: string;
   start: Date;
   end: Date;
-  blockUid: string;
+  blockUid?: string;
   edit?: string;
   calendar?: {
     account: string;
@@ -73,7 +72,7 @@ const CreateEventDialog = ({
     []
   );
   const [calendarId, setCalendarId] = useState(
-    calendarIds[0].calendar || "primary"
+    calendarIds[0]?.calendar || "primary"
   );
   return (
     <Dialog
@@ -184,10 +183,20 @@ const CreateEventDialog = ({
                       (edit ? apiPut<Event>(args) : apiPost<Event>(args))
                         .then((r) => {
                           if (!edit) {
-                            createBlock({
-                              parentUid: blockUid,
-                              node: { text: `Link:: ${r.htmlLink}` },
-                            });
+                            if (blockUid)
+                              createBlock({
+                                parentUid: blockUid,
+                                node: { text: `Link:: ${r.htmlLink}` },
+                              });
+                            else
+                              window.roamAlphaAPI.ui.mainWindow
+                                .getOpenPageOrBlockUid()
+                                .then((parentUid) =>
+                                  createBlock({
+                                    parentUid,
+                                    node: { text: `Link:: ${r.htmlLink}` },
+                                  })
+                                );
                           } else {
                             const blockText = getTextByBlockUid(blockUid);
                             const nodeChildrenUpdate = blockText.includes(

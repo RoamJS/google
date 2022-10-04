@@ -396,9 +396,9 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
         callback: () => {
           const blockUid =
             window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
-          const children = blockUid && getBasicTreeByParentUid(blockUid);
+          const children = blockUid ? getBasicTreeByParentUid(blockUid) : [];
           const props = {
-            summary: getTextByBlockUid(blockUid),
+            summary: blockUid ? getTextByBlockUid(blockUid) : "",
             ...Object.fromEntries(
               children.map((t) => {
                 const [key, value] = t.text.split("::").map((s) => s.trim());
