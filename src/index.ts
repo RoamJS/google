@@ -26,7 +26,7 @@ export default runExtension({
         {
           id: "oauth",
           name: "Log In",
-          description: "Log into Google to connect to your account to Roam!",
+          description: "Log into Google to connect your account to Roam!",
           action: {
             type: "reactComponent",
             component: () =>
@@ -34,7 +34,7 @@ export default runExtension({
                 service: "google",
                 getPopoutUrl: () =>
                   Promise.resolve(
-                    `https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=https://roamjs.com/oauth?auth=true&response_type=code&scope=${scopes}`
+                    `https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&client_id=950860433572-rvt5aborg8raln483ogada67n201quvh.apps.googleusercontent.com&redirect_uri=https://roamjs.com/oauth?auth=true&response_type=code&scope=${scopes}`
                   ),
                 getAuthData: (data: string) =>
                   apiPost({

@@ -61,7 +61,6 @@ const refreshEventUids = () => {
     getBlockUidAndTextIncludingText(GCAL_EVENT_URL).map(({ uid }) => uid)
   );
 };
-refreshEventUids();
 
 const pushBlocks = (
   bullets: InputTextNode[],
@@ -118,11 +117,12 @@ const loadBlockUid = (pageUid: string) => {
   });
 };
 
-let observers = new Set<MutationObserver>();
-let unloads = new Set<() => void>();
 const loadGoogleCalendar = (args: OnloadArgs) => {
+  const observers = new Set<MutationObserver>();
+  const unloads = new Set<() => void>();
   return (enabled: boolean) => {
     if (enabled) {
+      refreshEventUids();
       unloads.add(
         migrateLegacySettings({
           extensionId: "google-calendar",
