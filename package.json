@@ -10,7 +10,6 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.76",
     "@types/react-resizable": "^3.0.3",
     "roamjs-scripts": "^0.22.4"
   },
