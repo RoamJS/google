@@ -43,3 +43,14 @@ provider "github" {
     token = var.github_token
 }
 
+resource "github_actions_secret" "google_client_id" {
+  repository       = "roamjs-google"
+  secret_name      = "GOOGLE_CLIENT_ID"
+  plaintext_value  = var.google_client_id
+}
+
+resource "github_actions_secret" "google_client_secret" {
+  repository       = "roamjs-google"
+  secret_name      = "GOOGLE_CLIENT_SECRET"
+  plaintext_value  = var.google_client_secret
+}
