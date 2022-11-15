@@ -39,7 +39,7 @@ type Props = {
     account: string;
     calendar: string;
   };
-  getCalendarIds?: () => {
+  getCalendarIds: () => {
     calendar: string;
     account: string;
   }[];

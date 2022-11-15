@@ -261,14 +261,10 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
                 items: [] as Event[],
                 calendar,
                 error: `Error for calendar ${calendar}: ${
-                  e.response?.data?.error?.message ===
-                  "Request failed with status code 404"
+                  e?.error?.code === "404"
                     ? `Could not find calendar or it's not public. For more information on how to make it public, [visit this page](https://roamjs.com/extensions/google-calendar)`
-                    : (e.response?.data?.error?.message as string) ||
-                      (e.reponse?.data?.error as string) ||
-                      (typeof e.response?.data === "object"
-                        ? JSON.stringify(e.response.data)
-                        : e.response?.data)
+                    : (e.error?.message as string) ||
+                      (typeof e === "object" ? JSON.stringify(e) : e.message)
                 }`,
               }))
           )
@@ -420,6 +416,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
               start: new Date(),
               end: addMinutes(new Date(), 30),
               ...props,
+              getCalendarIds,
             },
           });
         },
@@ -466,6 +463,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
                 location: r.data.location,
                 start: new Date(r.data.start.dateTime),
                 end: new Date(r.data.end.dateTime),
+                getCalendarIds,
               },
             });
           });
