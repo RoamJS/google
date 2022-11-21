@@ -532,7 +532,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
         }
       }).forEach((o) => observers.add(o));
 
-      unloads.add(() =>
+      unloads.add(
         registerSmartBlocksCommand({
           text: "GOOGLECALENDAR",
           help: "Import your events for today from your Google Calendar integration.",
