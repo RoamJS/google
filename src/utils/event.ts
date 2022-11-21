@@ -40,11 +40,7 @@ const resolveAttendees = (e: Event, s: string) => {
 };
 
 const resolveSummary = (e: Event) =>
-  e.visibility === "private"
-    ? "busy"
-    : e.htmlLink
-    ? `[${e.summary}](${e.htmlLink})`
-    : e.summary || "No Summary";
+  e.visibility === "private" ? "busy" : e.summary || "No Summary";
 
 export const blockFormatEvent = (
   e: Event,
