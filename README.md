@@ -33,22 +33,36 @@ If you have both this extension and SmartBlocks installed, there is a `<%GOOGLEC
 ### Customization
 
 All of these options are configurable from the Roam Depot page. If you used this extension when it used to hosted from RoamJS directly, there is a `Migrate Settings To Roam Depot: google-calendar` command available to migrate your old settings to the new version.
-- `Linked Calendars` specifies which calendars you would like Roam to read before importing. If you specify more than one, it will read from all of those calendars. You must use the calendar ID provided by Google which you could find in the calendar settings. This will usually be your Gmail address, such as `dvargas92495@gmail.com`. If you are logged in with multiple accounts on the `roam/js/google` page, you could specify which one each calendar is mapped to.
-- `Calendar Event Format` specifies the text to add for each calendar event. It is a multi-block format so you could specify child blocks as part of the format. Could use the following placeholders to be replaced with the event's data:
-    - `{summary}` - the name of the event
-    - `{link}` - the link for the event
-    - `{hangout}` - the hangout link for the event
-    - `{confLink}` - a conference link for the event (labeled 'Meet' or 'Zoom' as appropriate)
-    - `{location}` - the location for the event
-    - `{start}` - the start time of the event. Add a colon and format to customize the start time format. For example, `{start:hh:mm}` will resolve to `12:00`. See the [date-fns library](https://date-fns.org/v2.22.1/docs/format) for more details on time formats.
-    - `{end}` - the end time of the event. Add a colon and format to customize the end time format. For example, `{end:hh:mmaaaaa}` will resolve to `12:00p`. See the [date-fns library](https://date-fns.org/v2.22.1/docs/format) for more details on time formats.
-    - `{attendees}` - the attendees of the event, comma-delimited. Could optionally include a format after a colon. For example, `{attendees:[[NAME]]}` will output each attendee as a page reference. The placeholder `NAME` will be replaced by the attendee's display name or the email if there's no display name.
-        - Display names are only available for gmail.com accounts, not for Gsuite/Workspaces accounts.
-    - `{calendar}` - the calendar id of the event
-    - `{duration}` - the duration of the event in minutes
-    - `{todo}` - A `{{[[TODO]]}}` checkbox
-- `Calendar Event Filter` is an optional regular expression you could use to filter for events based on the summary or description.
-- `Skip Free Events` filters out the events from your calendar that you've set to 'Free'
+
+#### `Linked Calendars` 
+
+Specifies which calendars you would like Roam to read before importing. If you specify more than one, it will read from all of those calendars. You must use the calendar ID provided by Google which you could find in the calendar settings. This will usually be your Gmail address, such as `dvargas92495@gmail.com`. If you are logged in with multiple accounts on the `roam/js/google` page, you could specify which one each calendar is mapped to.
+
+#### `Calendar Event Format`
+
+Specifies the text to add for each calendar event. The following placeholders are supported to be replaced with the event's data:
+- `{summary}` - the name of the event
+- `{link}` - the link for the event
+- `{hangout}` - the hangout link for the event
+- `{confLink}` - a conference link for the event (labeled 'Meet' or 'Zoom' as appropriate)
+- `{location}` - the location for the event
+- `{start}` - the start time of the event. Add a colon and format to customize the start time format. For example, `{start:hh:mm}` will resolve to `12:00`. See the [date-fns library](https://date-fns.org/v2.22.1/docs/format) for more details on time formats.
+- `{end}` - the end time of the event. Add a colon and format to customize the end time format. For example, `{end:hh:mmaaaaa}` will resolve to `12:00p`. See the [date-fns library](https://date-fns.org/v2.22.1/docs/format) for more details on time formats.
+- `{attendees}` - the attendees of the event, comma-delimited. Could optionally include a format after a colon. For example, `{attendees:[[NAME]]}` will output each attendee as a page reference. The placeholder `NAME` will be replaced by the attendee's display name or the email if there's no display name.
+    - Display names are only available for gmail.com accounts, not for Gsuite/Workspaces accounts.
+- `{calendar}` - the calendar id of the event
+- `{duration}` - the duration of the event in minutes
+- `{todo}` - A `{{[[TODO]]}}` checkbox
+
+You can add the format directly to the field for a single block format. For a multi-block with children format, specify the format as a block tree elsewhere in your graph, then copy and paste the block reference to the format field.
+
+#### `Calendar Event Filter` 
+
+An optional regular expression you could use to filter for events based on the summary or description.
+
+#### `Skip Free Events`
+
+Filters out the events from your calendar that you've set to 'Free'
 
 ### DEMO
 
