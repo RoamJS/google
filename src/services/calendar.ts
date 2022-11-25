@@ -223,9 +223,10 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
             };
         const filter =
           (args.extensionAPI.settings.get("event-filter") as string) || "";
-        const dateToUse = isNaN(dateFromPage.valueOf())
-          ? new Date()
-          : dateFromPage;
+        const dateToUse =
+          dateFromPage && !isNaN(dateFromPage.valueOf())
+            ? dateFromPage
+            : new Date();
         const timeMin = startOfDay(dateToUse);
         const timeMax = endOfDay(timeMin);
         const timeMinParam = encodeURIComponent(formatRFC3339(timeMin));
