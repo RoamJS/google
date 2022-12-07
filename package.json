@@ -15,6 +15,6 @@
   },
   "dependencies": {
     "react-resizable": "^3.0.4",
-    "roamjs-components": "^0.74.24"
+    "roamjs-components": "^0.74.28"
   }
 }
