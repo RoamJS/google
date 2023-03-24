@@ -87,7 +87,8 @@ export const blockFormatEvent = (
           : 24 * 60
         ).toString()
       )
-      .replace(/{todo}/g, "{{[[TODO]]}}"),
+      .replace(/{todo}/g, "{{[[TODO]]}}")
+      .replace(/{description}/g, e.description || ""),
     children: (format.children || []).map((c) => blockFormatEvent(e, c)),
   };
 };
