@@ -11,7 +11,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/react-resizable": "^3.0.3",
-    "roamjs-scripts": "^0.26.30"
+    "roamjs-scripts": "^0.26.32"
   },
   "dependencies": {
     "react-resizable": "^3.0.4",
