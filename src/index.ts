@@ -1,11 +1,12 @@
 import React from "react";
-import GoogleLogo from "./assets/Google.svg";
 import runExtension from "roamjs-components/util/runExtension";
 import OauthPanel from "roamjs-components/components/OauthPanel";
 import apiPost from "roamjs-components/util/apiPost";
 import CalendarConfig from "./components/CalendarConfig";
 import loadGoogleCalendar, { DEFAULT_FORMAT } from "./services/calendar";
 import loadGoogleDrive from "./services/drive";
+import GoogleLogo from "./components/GoogleLogo";
+
 
 const scopes = [
   "calendar.readonly",
