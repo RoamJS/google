@@ -4,17 +4,17 @@
   "description": "Connect to various Google services to your Roam graph!",
   "main": "./build/main.js",
   "scripts": {
-    "start": "roamjs-scripts dev --depot",
+    "start": "roamjs-scripts dev --labs",
     "prebuild:roam": "npm install",
-    "build:roam": "roamjs-scripts build --depot"
+    "build:roam": "roamjs-scripts build --labs --dry"
   },
   "license": "MIT",
   "devDependencies": {
     "@types/react-resizable": "^3.0.3",
-    "roamjs-scripts": "^0.22.4"
+    "roamjs-scripts": "^0.26.30"
   },
   "dependencies": {
     "react-resizable": "^3.0.4",
-    "roamjs-components": "^0.74.28"
+    "roamjs-components": "^0.75.1"
   }
 }
