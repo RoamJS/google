@@ -42,7 +42,7 @@ Specifies which calendars you would like Roam to read before importing. If you s
 
 Specifies the text to add for each calendar event. The following placeholders are supported to be replaced with the event's data:
 - `{summary}` - the name of the event
-- `{}` - the description of the event
+- `{description}` - the description of the event
 - `{link}` - the link for the event
 - `{hangout}` - the hangout link for the event
 - `{confLink}` - a conference link for the event (labeled 'Meet' or 'Zoom' as appropriate)
