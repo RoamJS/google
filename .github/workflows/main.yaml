@@ -6,6 +6,7 @@ on:
     paths:
       - "src/**"
       - ".github/workflows/main.yaml"
+      - "package.json"
 
 env:
   GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
