@@ -2,8 +2,8 @@ import React from "react";
 
 const GoogleLogo = () => (
   <svg
-    width="2443"
-    height="2500"
+    width="16"
+    height="16"
     viewBox="0 0 256 262"
     xmlns="http://www.w3.org/2000/svg"
     preserveAspectRatio="xMidYMid"
