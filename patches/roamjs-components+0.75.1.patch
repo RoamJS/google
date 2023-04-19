@@ -1,0 +1,13 @@
+diff --git a/node_modules/roamjs-components/util/handleFetch.js b/node_modules/roamjs-components/util/handleFetch.js
+index 14de31f..04cbfbb 100644
+--- a/node_modules/roamjs-components/util/handleFetch.js
++++ b/node_modules/roamjs-components/util/handleFetch.js
+@@ -28,7 +28,7 @@ const handleFetch = (transformArgs, { method, anonymous, authorization, path, hr
+         const type = r.headers.get("content-type") || "";
+         return (buffer
+             ? r.arrayBuffer()
+-            : /application\/json/.test(type)
++            : /^application\/json/.test(type)
+                 ? r.json().then((d) => (Object.assign(Object.assign({}, (Array.isArray(d) ? { data: d } : d)), { headers: Object.fromEntries(r.headers.entries()), status: r.status })))
+                 : r.text().then((t) => ({
+                     data: t,
