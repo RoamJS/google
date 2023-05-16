@@ -5,6 +5,7 @@ import type { InputTextNode } from "roamjs-components/types/native";
 const DEFAULT_DATE_FORMAT = "hh:mm a";
 
 export type Event = {
+  id: string;
   transparency: "transparent" | "opaque";
   summary: string;
   description?: string;

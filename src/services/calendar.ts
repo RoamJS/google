@@ -33,7 +33,6 @@ import { blockFormatEvent, Event } from "../utils/event";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getUidsFromButton from "roamjs-components/dom/getUidsFromButton";
 import parseNlpDate from "roamjs-components/date/parseNlpDate";
-import migrateLegacySettings from "roamjs-components/util/migrateLegacySettings";
 import getSubTree from "roamjs-components/util/getSubTree";
 import createPage from "roamjs-components/writes/createPage";
 import extractRef from "roamjs-components/util/extractRef";
@@ -43,7 +42,7 @@ export const DEFAULT_FORMAT = `{summary} ({start:hh:mm a} - {end:hh:mm a}){confL
 
 const EMPTY_MESSAGE = "No Events Scheduled for Today!";
 const UNAUTHORIZED_MESSAGE = `Error: Must log in to Google through the Roam Depot settings!`;
-const textareaRef: { current: HTMLTextAreaElement } = {
+const textareaRef: { current: HTMLTextAreaElement | null } = {
   current: null,
 };
 
@@ -123,80 +122,11 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
   return (enabled: boolean) => {
     if (enabled) {
       refreshEventUids();
-      unloads.add(
-        migrateLegacySettings({
-          extensionId: "google-calendar",
-          extensionAPI: args.extensionAPI,
-          specialKeys: {
-            import: (n) => {
-              const calendarTree = getSubTree({
-                tree: n.children,
-                key: "calendars",
-              }).children;
-              const skipFree = !!getSubTree({
-                tree: n.children,
-                key: "skip free",
-              }).uid;
-              const formatTree = getSubTree({
-                tree: n.children,
-                key: "format",
-              }).children;
-              const filterTree = getSubTree({
-                tree: n.children,
-                key: "filter",
-              }).children;
-              const addTodo = !!getSubTree({
-                tree: n.children,
-                key: "add todo",
-              }).uid;
-              const formatNode = formatTree.length
-                ? formatTree[0]
-                : ({ text: DEFAULT_FORMAT, children: [] } as RoamBasicNode);
-              if (addTodo) {
-                formatNode.text = `{{[[TODO]]}} ${formatNode.text}`;
-              }
-              if (formatNode.children.length) {
-                Promise.resolve(
-                  getPageUidByPageTitle("roam/js/google-calendar/format") ||
-                    createPage({ title: "roam/js/google-calendar/format" })
-                ).then((parentUid) =>
-                  window.roamAlphaAPI.moveBlock({
-                    location: { order: 0, "parent-uid": parentUid },
-                    block: { uid: formatNode.uid },
-                  })
-                );
-              }
-              return [
-                {
-                  key: "calendars",
-                  value: calendarTree.map((calendarId) => ({
-                    calendar: calendarId?.text,
-                    account: calendarId?.children[0]?.text,
-                  })),
-                },
-                {
-                  key: "event-format",
-                  value: formatNode.children.length
-                    ? formatNode.text
-                    : formatNode.uid,
-                },
-                {
-                  key: "event-filter",
-                  value: filterTree[0]?.text,
-                },
-                {
-                  key: "skip-free",
-                  value: skipFree,
-                },
-              ];
-            },
-          },
-        })
-      );
 
       const fetchGoogleCalendar = async (
-        pageTitle = getPageTitleByHtmlElement(document.activeElement)
-          .textContent
+        pageTitle = document.activeElement
+          ? getPageTitleByHtmlElement(document.activeElement)?.textContent || ""
+          : ""
       ): Promise<InputTextNode[]> => {
         const dateFromPage =
           window.roamAlphaAPI.util.pageTitleToDate(pageTitle);
@@ -317,7 +247,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
           });
       };
 
-      const importGoogleCalendar = async (blockUid?: string) => {
+      const importGoogleCalendar = async (blockUid = "") => {
         /** Roam has no way to activate command palette on mobile yet -.-
     const parent = getRenderRoot("google-calendar-deprecation");
     render({
@@ -339,7 +269,11 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
           (args.extensionAPI.settings.get("calendars") as {
             calendar: string;
             account: string;
-          }[]) || []
+          }[]) ||
+          ([] as {
+            calendar: string;
+            account: string;
+          }[])
         );
       };
 
@@ -366,7 +300,8 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
                 `[:find (pull ?p [:block/uid]) :where [?b :block/uid "${focusedUid}"] [?b :block/page ?p]]`
               ) as [PullBlock][]
             )[0]?.[0]?.[":block/uid"]) ||
-          (await window.roamAlphaAPI.ui.mainWindow.getOpenPageOrBlockUid());
+          (await window.roamAlphaAPI.ui.mainWindow.getOpenPageOrBlockUid()) ||
+          "";
         return loadBlockUid(parentUid)
           .then((blockUid) =>
             fetchGoogleCalendar(getPageTitleByPageUid(parentUid)).then(
@@ -392,10 +327,10 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
         label: "Add Google Calendar Event",
         callback: () => {
           const blockUid =
-            window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
+            window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"] || "";
           const children = blockUid ? getBasicTreeByParentUid(blockUid) : [];
           const props = {
-            summary: blockUid ? getTextByBlockUid(blockUid) : "",
+            summary: blockUid ? getTextByBlockUid(blockUid) : "No Summary",
             ...Object.fromEntries(
               children.map((t) => {
                 const [key, value] = t.text.split("::").map((s) => s.trim());
@@ -411,7 +346,6 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
             Overlay: CreateEventDialog,
             props: {
               blockUid,
-              summary: "No Summary",
               description: "",
               location: "",
               start: new Date(),
@@ -432,15 +366,15 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
         label: "Edit Google Calendar Event",
         callback: () => {
           const blockUid =
-            window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
+            window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"] || "";
           const calendarIds = getCalendarIds();
           Promise.all(
             calendarIds.map((c) =>
               getAccessToken(c.account).then((token) => {
                 const text = getTextByBlockUid(blockUid);
-                const eventId = GCAL_EVENT_REGEX.exec(text)?.[1];
-                const edit = atob(eventId).split(" ")[0];
-                return apiGet({
+                const eventId = GCAL_EVENT_REGEX.exec(text)?.[1] || "";
+                const edit = window.atob(eventId).split(" ")[0];
+                return apiGet<{ data: Event }>({
                   domain: `https://www.googleapis.com`,
                   path: `calendar/v3/calendars/${encodeURIComponent(
                     c.calendar
@@ -456,14 +390,14 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
             return renderOverlay({
               Overlay: CreateEventDialog,
               props: {
-                edit: r.data.id,
-                calendar: r.calendar,
+                edit: r!.data.id,
+                calendar: r!.calendar,
                 blockUid,
-                summary: r.data.summary,
-                description: r.data.description,
-                location: r.data.location,
-                start: new Date(r.data.start.dateTime),
-                end: new Date(r.data.end.dateTime),
+                summary: r!.data.summary,
+                description: r!.data.description || "",
+                location: r!.data.location,
+                start: new Date(r!.data.start.dateTime),
+                end: new Date(r!.data.end.dateTime),
                 getCalendarIds,
               },
             });
@@ -480,7 +414,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
         createHTMLObserver({
           tag: "TEXTAREA",
           className: "rm-block-input",
-          callback: (t: HTMLTextAreaElement) => (textareaRef.current = t),
+          callback: (t) => (textareaRef.current = t as HTMLTextAreaElement),
         })
       );
 
@@ -488,6 +422,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
         const { blockUid } = getUids(b);
         if (eventUids.current.has(blockUid)) {
           const container = b.closest(".rm-block-main");
+          if (!container) return;
           const icon = createIconButton("edit");
           icon.style.position = "absolute";
           icon.style.top = "0";
@@ -498,9 +433,9 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
               calendarIds.map((c) =>
                 getAccessToken(c.account).then((token) => {
                   const text = getTextByBlockUid(blockUid);
-                  const eventId = GCAL_EVENT_REGEX.exec(text)?.[1];
-                  const edit = atob(eventId).split(" ")[0];
-                  return apiGet({
+                  const eventId = GCAL_EVENT_REGEX.exec(text)?.[1] || "";
+                  const edit = window.atob(eventId).split(" ")[0];
+                  return apiGet<{ data: Event }>({
                     domain: `https://www.googleapis.com`,
                     path: `calendar/v3/calendars/${encodeURIComponent(
                       c.calendar
@@ -516,14 +451,14 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
               return renderOverlay({
                 Overlay: CreateEventDialog,
                 props: {
-                  edit: r.data.id,
-                  calendar: r.calendar,
+                  edit: r!.data.id,
+                  calendar: r!.calendar,
                   blockUid,
-                  summary: r.data.summary,
-                  description: r.data.description,
-                  location: r.data.location,
-                  start: new Date(r.data.start.dateTime),
-                  end: new Date(r.data.end.dateTime),
+                  summary: r!.data.summary,
+                  description: r!.data.description || "",
+                  location: r!.data.location,
+                  start: new Date(r!.data.start.dateTime),
+                  end: new Date(r!.data.end.dateTime),
                   getCalendarIds,
                 },
               });

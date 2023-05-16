@@ -28,17 +28,17 @@ import apiPost from "roamjs-components/util/apiPost";
 import type { Event } from "../utils/event";
 
 type Props = {
+  calendar?: {
+    calendar: string;
+    account: string;
+  };
   summary: string;
   location: string;
   description: string;
   start: Date;
   end: Date;
-  blockUid?: string;
+  blockUid: string;
   edit?: string;
-  calendar?: {
-    account: string;
-    calendar: string;
-  };
   getCalendarIds: () => {
     calendar: string;
     account: string;
@@ -191,11 +191,13 @@ const CreateEventDialog = ({
                             else
                               window.roamAlphaAPI.ui.mainWindow
                                 .getOpenPageOrBlockUid()
-                                .then((parentUid) =>
-                                  createBlock({
-                                    parentUid,
-                                    node: { text: `Link:: ${r.htmlLink}` },
-                                  })
+                                .then(
+                                  (parentUid) =>
+                                    parentUid &&
+                                    createBlock({
+                                      parentUid,
+                                      node: { text: `Link:: ${r.htmlLink}` },
+                                    })
                                 );
                           } else {
                             const blockText = getTextByBlockUid(blockUid);
@@ -209,7 +211,7 @@ const CreateEventDialog = ({
                             const updateNode = (n: RoamBasicNode) => {
                               const newText = n.text
                                 .replace(summary, r.summary)
-                                .replace(description, r.description)
+                                .replace(description, r.description || "")
                                 .replace(location, r.location);
                               if (newText !== n.text) {
                                 updateBlock({ text: newText, uid: n.uid });
