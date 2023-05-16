@@ -9,11 +9,11 @@ on:
       - "package.json"
 
 env:
-  GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
   API_URL: https://lambda.roamjs.com
-  ROAMJS_EMAIL: support@roamjs.com
-  ROAMJS_EXTENSION_ID: google
   GITHUB_TOKEN: ${{ secrets.ROAMJS_RELEASE_TOKEN }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: us-east-1
 
 jobs:
   deploy:
@@ -23,4 +23,4 @@ jobs:
       - name: install
         run: npm install
       - name: build
-        run: npx roamjs-scripts build --labs
+        run: samepage build
