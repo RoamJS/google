@@ -17,8 +17,7 @@ const scopes = [
   .map((s) => `https://www.googleapis.com/auth/${s}`)
   .join("%20");
 
-export default runExtension({
-  run: (args) => {
+export default runExtension(async (args) => {
     const toggleGoogleCalendar = loadGoogleCalendar(args);
     const toggleGoogleDrive = loadGoogleDrive(args);
     args.extensionAPI.settings.panel.create({
@@ -115,4 +114,4 @@ export default runExtension({
       },
     };
   },
-});
+);

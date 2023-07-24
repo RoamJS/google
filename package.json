@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "react-resizable": "^3.0.4",
-    "roamjs-components": "^0.78.7"
+    "roamjs-components": "^0.82.0"
   },
   "samepage": {
     "extends": "./node_modules/roamjs-components/package.json"
