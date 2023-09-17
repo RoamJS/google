@@ -36,18 +36,13 @@ const uploadFileChunk = (
   Authorization: string,
   contentLength: number,
   uid: string,
-  fileToUpload: File,
-  retryCount: number = 0
+  fileToUpload: File
 ): Promise<{ id: string }> => {
   updateBlock({
     uid,
     text: `Loading ${Math.round((100 * start) / contentLength)}%`,
   });
-  if (retryCount > 5) return Promise.reject("Too many retries");
-  console.log("Start -------- count: ", retryCount);
-  retryCount++;
-  const endMin = Math.min(start + CHUNK_MAX, contentLength);
-  const end = endMin === contentLength ? start + CHUNK_MAX : endMin;
+  const end = Math.min(start + CHUNK_MAX, contentLength);
   const reader = new FileReader();
   reader.readAsArrayBuffer(fileToUpload.slice(start, end));
   return new Promise((resolve, reject) => {
@@ -56,67 +51,79 @@ const uploadFileChunk = (
         `Uploading chunk starting at byte ${start} and ending at byte ${end}`
       );
       const buf = new Uint8Array(reader.result as ArrayBuffer);
-      const contentLength = end - start;
       const contentRange = `bytes ${start}-${end - 1}/${contentLength}`;
       console.log("apiPut", {
         headers: { contentLength, contentRange },
       });
-      apiPut<{
-        status: 308 | 200;
-        headers: { range: string };
-        id: string;
-        mimeType: string;
-      }>({
-        domain,
-        path: `${path}&access_token=${Authorization}`,
-        data: buf,
+      // Execute the PUT request to upload the chunk
+      fetch(`${domain}${path}`, {
+        method: "PUT",
         headers: {
-          contentLength: contentLength.toString(),
-          contentRange,
+          Authorization: Authorization,
+          "Content-Range": contentRange,
+          "Content-Length": String(end - start),
         },
-        anonymous: true,
+        body: buf,
       })
         .then((r) => {
-          console.log("Received response", r);
-          console.log("Received Range header:", r.headers?.range);
-          if (r.status === 308) {
-            const nextStartByte =
-              Number(r.headers?.range.replace(/^bytes=0-/, "")) + 1;
-
-            // Debug log to print nextStartByte
-            console.log("start", start);
-            console.log("end", end);
-            console.log("Next start byte:", nextStartByte);
-
-            // Verify if nextStartByte is actually greater than start
-            if (nextStartByte <= start) {
-              console.warn(
-                "Next start byte is less than or equal to current start. Exiting to avoid infinite loop."
-              );
-              // return reject("Infinite loop detected");
-            }
-
-            resolve(
-              uploadFileChunk(
-                nextStartByte,
+          if (r.status === 200 || r.status === 201) {
+            // Upload is complete
+            return r.json();
+          } else if (r.status === 308) {
+            // Resume Incomplete, get the next byte range to start uploading from
+            const rangeHeader = r.headers.get("Range");
+            if (rangeHeader) {
+              const nextStart =
+                Number(rangeHeader.replace(/^bytes=0-/, "")) + 1;
+              return uploadFileChunk(
+                nextStart,
                 domain,
                 path,
                 Authorization,
                 contentLength,
                 uid,
-                fileToUpload,
-                retryCount
-              )
+                fileToUpload
+              );
+            } else {
+              // If Range header is missing, start from beginning
+              return uploadFileChunk(
+                0,
+                domain,
+                path,
+                Authorization,
+                contentLength,
+                uid,
+                fileToUpload
+              );
+            }
+          } else if (r.status === 404) {
+            return Promise.reject(
+              "Upload session expired, restart the upload."
             );
-          } else if (r.status === 200) {
-            resolve({ id: r.id });
           } else {
-            reject(r);
+            console.error(`Server responded with ${r.status}: ${r.statusText}`);
+            return Promise.reject(
+              `Server responded with ${r.status}: ${r.statusText}`
+            );
           }
         })
-        .catch((e) => {
-          console.log("Error", e);
-          reject(e);
+        .then((data) => {
+          if (data && data.id) {
+            console.log("Upload complete");
+            resolve({ id: data.id });
+          }
+        })
+        .catch((err) => {
+          console.error(`Upload failed: ${err}`);
+          return uploadFileChunk(
+            start,
+            domain,
+            path,
+            Authorization,
+            contentLength,
+            uid,
+            fileToUpload
+          );
         });
     };
   });
