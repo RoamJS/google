@@ -298,19 +298,26 @@ const loadGoogleDrive = (args: OnloadArgs) => {
           className: "dnd-drop-area",
           callback: (d: HTMLDivElement) => {
             d.addEventListener("drop", (e) => {
-              uploadToDrive({
-                extensionAPI: args.extensionAPI,
-                files: e.dataTransfer.files,
-                getLoadingUid: () => {
-                  const { parentUid, offset } = getDropUidOffset(d);
-                  return createBlock({
-                    parentUid,
-                    order: offset,
-                    node: { text: "Loading..." },
-                  });
-                },
-                e,
-              });
+              if (
+                e.dataTransfer?.types.includes("Files") &&
+                e.dataTransfer.files.length > 0
+              ) {
+                e.preventDefault(); // prevent browser loading image in new tab
+                e.stopPropagation(); // prevent roam uploading / creating image block
+                uploadToDrive({
+                  extensionAPI: args.extensionAPI,
+                  files: e.dataTransfer.files,
+                  getLoadingUid: () => {
+                    const { parentUid, offset } = getDropUidOffset(d);
+                    return createBlock({
+                      parentUid,
+                      order: offset,
+                      node: { text: "Loading..." },
+                    });
+                  },
+                  e,
+                });
+              }
             });
           },
         })
