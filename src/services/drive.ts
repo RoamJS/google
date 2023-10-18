@@ -10,8 +10,8 @@ import createBlock from "roamjs-components/writes/createBlock";
 import getDropUidOffset from "roamjs-components/dom/getDropUidOffset";
 import apiGet from "roamjs-components/util/apiGet";
 import apiPost from "roamjs-components/util/apiPost";
-import apiPut from "roamjs-components/util/apiPut";
 import mimeTypes from "../utils/mimeTypes";
+import { render as renderToast } from "roamjs-components/components/Toast";
 
 const mimeLookup = (path: string) => {
   if (!path || typeof path !== "string") {
@@ -282,7 +282,7 @@ const uploadToDrive = async ({
   }
 };
 
-const textareaRef: { current: HTMLTextAreaElement } = {
+const textareaRef: { current: HTMLTextAreaElement | null } = {
   current: null,
 };
 
@@ -296,21 +296,29 @@ const loadGoogleDrive = (args: OnloadArgs) => {
         createHTMLObserver({
           tag: "DIV",
           className: "dnd-drop-area",
-          callback: (d: HTMLDivElement) => {
+          callback: (e: HTMLElement) => {
+            const d = e as HTMLDivElement;
             d.addEventListener("drop", (e) => {
-              uploadToDrive({
-                extensionAPI: args.extensionAPI,
-                files: e.dataTransfer.files,
-                getLoadingUid: () => {
-                  const { parentUid, offset } = getDropUidOffset(d);
-                  return createBlock({
-                    parentUid,
-                    order: offset,
-                    node: { text: "Loading..." },
-                  });
-                },
-                e,
-              });
+              if (
+                e.dataTransfer?.types.includes("Files") &&
+                e.dataTransfer.files.length > 0
+              ) {
+                e.preventDefault(); // prevent browser loading image in new tab
+                e.stopPropagation(); // prevent roam uploading / creating image block
+                uploadToDrive({
+                  extensionAPI: args.extensionAPI,
+                  files: e.dataTransfer.files,
+                  getLoadingUid: () => {
+                    const { parentUid, offset } = getDropUidOffset(d);
+                    return createBlock({
+                      parentUid,
+                      order: offset,
+                      node: { text: "Loading..." },
+                    });
+                  },
+                  e,
+                });
+              }
             });
           },
         })
@@ -319,9 +327,11 @@ const loadGoogleDrive = (args: OnloadArgs) => {
         createHTMLObserver({
           tag: "TEXTAREA",
           className: "rm-block-input",
-          callback: (t: HTMLTextAreaElement) => {
+          callback: (e: HTMLElement) => {
+            const t = e as HTMLTextAreaElement;
             textareaRef.current = t;
             t.addEventListener("paste", (e) => {
+              if (!e.clipboardData) return;
               uploadToDrive({
                 extensionAPI: args.extensionAPI,
                 files: e.clipboardData.files,
@@ -349,9 +359,15 @@ const loadGoogleDrive = (args: OnloadArgs) => {
           target.addEventListener(
             "change",
             (e) => {
+              const files = (e.target as HTMLInputElement).files;
+              if (!files)
+                return renderToast({
+                  id: "google-drive",
+                  content: "No files selected!",
+                });
               uploadToDrive({
                 extensionAPI: args.extensionAPI,
-                files: (e.target as HTMLInputElement).files,
+                files,
                 getLoadingUid: () => {
                   const { blockUid } = getUids(textareaRef.current);
                   return updateBlock({
