@@ -133,7 +133,7 @@ const ID_REGEX = /{{google drive:\s*(.*?)\s*}}/;
 
 const GoogleDriveButton = ({ blockUid }: Props) => {
   const id = useMemo(
-    () => ID_REGEX.exec(getTextByBlockUid(blockUid))?.[1],
+    () => ID_REGEX.exec(getTextByBlockUid(blockUid))?.[1] || "",
     [blockUid]
   );
   const [name, setName] = useState("Unknown File");
