@@ -1,4 +1,4 @@
-import { Button, Card, Spinner } from "@blueprintjs/core";
+import { Button, Dialog, Spinner } from "@blueprintjs/core";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import getAccessToken from "../utils/getAccessToken";
 import setInputSetting from "roamjs-components/util/setInputSetting";
@@ -76,6 +76,7 @@ const PreviewImage = ({
   const [height, setHeight] = useState<string | number>("100%");
   const [width, setWidth] = useState<string | number>("100%");
   const [imageStats, setImageStats] = useState({ width: 1, height: 1 });
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   useEffect(() => {
     if (src) {
       const dummyImage = new Image();
@@ -105,12 +106,24 @@ const PreviewImage = ({
     }
   }, [setHeight, setWidth, parentHeight, parentWidth, imageStats]);
   return src ? (
-    <img
-      src={src}
-      alt={"Failed to load Image"}
-      style={{ width, height }}
-      ref={imageRef}
-    />
+    <>
+      <img
+        src={src}
+        alt={"Failed to load Image"}
+        style={{ width, height }}
+        ref={imageRef}
+        onClick={() => {
+          setImageDialogOpen(true);
+        }}
+      />
+      <Dialog
+        isOpen={imageDialogOpen}
+        onClose={() => setImageDialogOpen(false)}
+        className="rm-modal-dialog rm-modal-dialog--image"
+      >
+        <img src={src} className="rm-modal-img" />
+      </Dialog>
+    </>
   ) : (
     <Spinner />
   );
