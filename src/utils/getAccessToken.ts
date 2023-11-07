@@ -4,6 +4,9 @@ import localStorageGet from "roamjs-components/util/localStorageGet";
 import localStorageSet from "roamjs-components/util/localStorageSet";
 import apiPost from "roamjs-components/util/apiPost";
 
+export const GOOGLE_CLIENT_ID =
+  "950860433572-rvt5aborg8raln483ogada67n201quvh.apps.googleusercontent.com";
+
 const getAccessToken = (label?: string) => {
   const oauth = getOauth("google", label);
   if (oauth !== "{}") {
@@ -15,7 +18,11 @@ const getAccessToken = (label?: string) => {
     );
     return tokenAge > expires_in
       ? apiPost({
-          path: `google-auth`,
+          domain: "https://api.samepage.network",
+          path: "extensions/google/auth",
+          headers: {
+            "x-google-client-id": GOOGLE_CLIENT_ID,
+          },
           data: {
             refresh_token,
             grant_type: "refresh_token",

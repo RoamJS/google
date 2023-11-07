@@ -6,6 +6,7 @@ import CalendarConfig from "./components/CalendarConfig";
 import loadGoogleCalendar, { DEFAULT_FORMAT } from "./services/calendar";
 import loadGoogleDrive from "./services/drive";
 import GoogleLogo from "./components/GoogleLogo";
+import { GOOGLE_CLIENT_ID } from "./utils/getAccessToken";
 
 const scopes = [
   "calendar.readonly",
@@ -33,15 +34,19 @@ export default runExtension(async (args) => {
               service: "google",
               getPopoutUrl: () =>
                 Promise.resolve(
-                  `https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&client_id=950860433572-rvt5aborg8raln483ogada67n201quvh.apps.googleusercontent.com&redirect_uri=https://roamjs.com/oauth?auth=true&response_type=code&scope=${scopes}`
+                  `https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&client_id=${GOOGLE_CLIENT_ID}&response_type=code&scope=${scopes}&redirect_uri=https://samepage.network/oauth/google?roamjs=true`
                 ),
               getAuthData: (data: string) =>
                 apiPost({
+                  domain: "https://api.samepage.network",
                   anonymous: true,
-                  path: "google-auth",
+                  path: "extensions/google/auth",
                   data: {
                     ...JSON.parse(data),
                     grant_type: "authorization_code",
+                  },
+                  headers: {
+                    "x-google-client-id": GOOGLE_CLIENT_ID,
                   },
                 }),
               ServiceIcon: GoogleLogo,
