@@ -131,7 +131,9 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
 
       const fetchGoogleCalendar = async (
         startDatePageTitle = getActiveDatePageTitle(),
-        endDatePageTitle = getActiveDatePageTitle()
+        endDatePageTitle = startDatePageTitle
+          ? startDatePageTitle
+          : getActiveDatePageTitle()
       ): Promise<InputTextNode[]> => {
         const calendarIds = getCalendarIds();
         if (!calendarIds.length) {
@@ -495,7 +497,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
             }) =>
             async (
               start = getPageTitle(context.targetUid),
-              end = getPageTitle(context.targetUid)
+              end = start ? start : getPageTitle(context.targetUid)
             ) => {
               const getDateBasisDate = () => {
                 if (context.variables["DATEBASISMETHOD"] === "DNP") {
