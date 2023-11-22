@@ -41,7 +41,7 @@ import extractRef from "roamjs-components/util/extractRef";
 const GOOGLE_COMMAND = "Import Google Calendar";
 export const DEFAULT_FORMAT = `{summary} ({start:hh:mm a} - {end:hh:mm a}){confLink}`;
 
-const EMPTY_MESSAGE = "No Events Scheduled for Today!";
+const EMPTY_MESSAGE = "No Events Scheduled for Selected Date(s)!";
 const UNAUTHORIZED_MESSAGE = `Error: Must log in to Google through the Roam Depot settings!`;
 const textareaRef: { current: HTMLTextAreaElement | null } = {
   current: null,
