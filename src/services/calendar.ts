@@ -495,10 +495,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
               targetUid: string;
               variables: Record<string, string>;
             }) =>
-            async (
-              start = getPageTitle(context.targetUid),
-              end = start ? start : getPageTitle(context.targetUid)
-            ) => {
+            async (start = getPageTitle(context.targetUid), end = start) => {
               const getDateBasisDate = () => {
                 if (context.variables["DATEBASISMETHOD"] === "DNP") {
                   const title = getPageTitle(context.targetUid);
