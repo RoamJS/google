@@ -33,6 +33,7 @@ import { blockFormatEvent, Event } from "../utils/event";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getUidsFromButton from "roamjs-components/dom/getUidsFromButton";
 import parseNlpDate from "roamjs-components/date/parseNlpDate";
+import { DAILY_NOTE_PAGE_REGEX } from "roamjs-components/date/constants";
 import getSubTree from "roamjs-components/util/getSubTree";
 import createPage from "roamjs-components/writes/createPage";
 import extractRef from "roamjs-components/util/extractRef";
@@ -40,7 +41,7 @@ import extractRef from "roamjs-components/util/extractRef";
 const GOOGLE_COMMAND = "Import Google Calendar";
 export const DEFAULT_FORMAT = `{summary} ({start:hh:mm a} - {end:hh:mm a}){confLink}`;
 
-const EMPTY_MESSAGE = "No Events Scheduled for Today!";
+const EMPTY_MESSAGE = "No Events Scheduled for Selected Date(s)!";
 const UNAUTHORIZED_MESSAGE = `Error: Must log in to Google through the Roam Depot settings!`;
 const textareaRef: { current: HTMLTextAreaElement | null } = {
   current: null,
@@ -123,13 +124,17 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
     if (enabled) {
       refreshEventUids();
 
-      const fetchGoogleCalendar = async (
-        pageTitle = document.activeElement
+      const getActiveDatePageTitle = () =>
+        document.activeElement
           ? getPageTitleByHtmlElement(document.activeElement)?.textContent || ""
-          : ""
+          : "";
+
+      const fetchGoogleCalendar = async (
+        startDatePageTitle = getActiveDatePageTitle(),
+        endDatePageTitle = startDatePageTitle
+          ? startDatePageTitle
+          : getActiveDatePageTitle()
       ): Promise<InputTextNode[]> => {
-        const dateFromPage =
-          window.roamAlphaAPI.util.pageTitleToDate(pageTitle);
         const calendarIds = getCalendarIds();
         if (!calendarIds.length) {
           return [
@@ -153,12 +158,21 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
             };
         const filter =
           (args.extensionAPI.settings.get("event-filter") as string) || "";
-        const dateToUse =
-          dateFromPage && !isNaN(dateFromPage.valueOf())
+
+        const getDateFromPageTitle = (pageTitle: string) => {
+          const dateFromPage =
+            window.roamAlphaAPI.util.pageTitleToDate(pageTitle);
+          return dateFromPage && !isNaN(dateFromPage.valueOf())
             ? dateFromPage
             : new Date();
-        const timeMin = startOfDay(dateToUse);
-        const timeMax = endOfDay(timeMin);
+        };
+        const startDateToUse = getDateFromPageTitle(startDatePageTitle);
+        const endDateToUse =
+          startDatePageTitle === endDatePageTitle
+            ? startDateToUse
+            : getDateFromPageTitle(endDatePageTitle);
+        const timeMin = startOfDay(startDateToUse);
+        const timeMax = endOfDay(endDateToUse);
         const timeMinParam = encodeURIComponent(formatRFC3339(timeMin));
         const timeMaxParam = encodeURIComponent(formatRFC3339(timeMax));
 
@@ -468,22 +482,58 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
         }
       }).forEach((o) => observers.add(o));
 
+      const getPageTitle = (uid: string) => {
+        return getPageTitleByBlockUid(uid) || getPageTitleByPageUid(uid);
+      };
+
       unloads.add(
         registerSmartBlocksCommand({
           text: "GOOGLECALENDAR",
           help: "Import your events for today from your Google Calendar integration.",
-          handler: (context: { targetUid: string }) => () =>
-            fetchGoogleCalendar(
-              getPageTitleByBlockUid(context.targetUid) ||
-                getPageTitleByPageUid(context.targetUid)
-            ).then((bullets) => {
-              setTimeout(refreshEventUids, 1000);
-              if (bullets.length) {
-                return bullets;
-              } else {
-                return EMPTY_MESSAGE;
-              }
-            }),
+          handler:
+            (context: {
+              targetUid: string;
+              variables: Record<string, string>;
+            }) =>
+            async (start = getPageTitle(context.targetUid), end = start) => {
+              const getDateBasisDate = () => {
+                if (context.variables["DATEBASISMETHOD"] === "DNP") {
+                  const title = getPageTitle(context.targetUid);
+                  const dnp = DAILY_NOTE_PAGE_REGEX.test(title)
+                    ? window.roamAlphaAPI.util.pageTitleToDate(title) ||
+                      new Date()
+                    : new Date();
+                  dnp.setHours(new Date().getHours());
+                  dnp.setMinutes(new Date().getMinutes());
+                  return dnp;
+                } else if (context.variables["DATEBASISMETHOD"]) {
+                  return new Date(context.variables["DATEBASISMETHOD"]);
+                } else {
+                  return new Date();
+                }
+              };
+              // chrono fails basic parsing requiring forward date if ambiguous
+              // https://github.com/wanasit/chrono/commit/4f264a9f21fbd04eb740bf48f5616f6e6e0e78b7
+              const getNlpDate = (nlp: string) =>
+                parseNlpDate(nlp, getDateBasisDate()) ||
+                parseNlpDate(`in ${nlp}`, getDateBasisDate());
+              const dateToPageTitle = (d: Date) =>
+                window.roamAlphaAPI.util.dateToPageTitle(d);
+
+              const nlpStartDate = getNlpDate(start);
+              const nlpEndDate = getNlpDate(end);
+              const startDate = dateToPageTitle(nlpStartDate);
+              const endDate = dateToPageTitle(nlpEndDate);
+
+              return fetchGoogleCalendar(startDate, endDate).then((bullets) => {
+                setTimeout(refreshEventUids, 1000);
+                if (bullets.length) {
+                  return bullets;
+                } else {
+                  return EMPTY_MESSAGE;
+                }
+              });
+            },
         })
       );
     } else {

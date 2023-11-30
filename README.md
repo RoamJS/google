@@ -1,5 +1,5 @@
 # Google
-      
+
 Connect various Google services to your Roam graph!
 
 ## Setup
@@ -22,25 +22,38 @@ You can create google calendar event right from Roam! To create an event, focus 
 
 You can update existing events on Google Calendar from Roam.
 
-On any block that has a Google Calendar link, an edit pencil will appear on the right end of the block. Clicking the pencil will prefill the dialog with the event's __existing__ data from Google Calendar. Change the values from the dialog and hit update. Upon successfully updating, the block's contents with the link will update to reflect the new values of the Google Calendar event! You could also edit the event by selecting "Edit Google Calendar Event" from the command palette while focused on the block.
+On any block that has a Google Calendar link, an edit pencil will appear on the right end of the block. Clicking the pencil will prefill the dialog with the event's **existing** data from Google Calendar. Change the values from the dialog and hit update. Upon successfully updating, the block's contents with the link will update to reflect the new values of the Google Calendar event! You could also edit the event by selecting "Edit Google Calendar Event" from the command palette while focused on the block.
 
 ### SmartBlocks
 
-This extension integrates with [SmartBlocks](https://roamjs.com/extensions/smartblocks)! 
+This extension integrates with [SmartBlocks](https://github.com/RoamJS/smartblocks)!
 
 If you have both this extension and SmartBlocks installed, there is a `<%GOOGLECALENDAR%>` command available. The command will automatically run the import google calendar logic and paste the events in blocks before continuing with the rest of the workflow.
+
+**Parameters**:
+
+1. Start date - Supports NLP (Defaults to DNP of target block)
+2. End Date - Supports NLP (Defaults to Start date if not set)
+
+(This command also supports the SmartBlock Command `<%DATEBASIS%>` setting)
+
+**Example**:
+
+- `<%GOOGLECALENDAR:today,tomorrow%>`
+- `<%GOOGLECALENDAR:tomorrow%>`
 
 ### Customization
 
 All of these options are configurable from the Roam Depot page. If you used this extension when it used to hosted from RoamJS directly, there is a `Migrate Settings To Roam Depot: google-calendar` command available to migrate your old settings to the new version.
 
-#### `Linked Calendars` 
+#### `Linked Calendars`
 
 Specifies which calendars you would like Roam to read before importing. If you specify more than one, it will read from all of those calendars. You must use the calendar ID provided by Google which you could find in the calendar settings. This will usually be your Gmail address, such as `dvargas92495@gmail.com`. If you are logged in with multiple accounts on the `roam/js/google` page, you could specify which one each calendar is mapped to.
 
 #### `Calendar Event Format`
 
 Specifies the text to add for each calendar event. The following placeholders are supported to be replaced with the event's data:
+
 - `{summary}` - the name of the event
 - `{description}` - the description of the event
 - `{link}` - the link for the event
@@ -50,14 +63,14 @@ Specifies the text to add for each calendar event. The following placeholders ar
 - `{start}` - the start time of the event. Add a colon and format to customize the start time format. For example, `{start:hh:mm}` will resolve to `12:00`. See the [date-fns library](https://date-fns.org/v2.22.1/docs/format) for more details on time formats.
 - `{end}` - the end time of the event. Add a colon and format to customize the end time format. For example, `{end:hh:mmaaaaa}` will resolve to `12:00p`. See the [date-fns library](https://date-fns.org/v2.22.1/docs/format) for more details on time formats.
 - `{attendees}` - the attendees of the event, comma-delimited. Could optionally include a format after a colon. For example, `{attendees:[[NAME]]}` will output each attendee as a page reference. The placeholder `NAME` will be replaced by the attendee's display name or the email if there's no display name.
-    - Display names are only available for gmail.com accounts, not for Gsuite/Workspaces accounts.
+  - Display names are only available for gmail.com accounts, not for Gsuite/Workspaces accounts.
 - `{calendar}` - the calendar id of the event
 - `{duration}` - the duration of the event in minutes
 - `{todo}` - A `{{[[TODO]]}}` checkbox
 
 You can add the format directly to the field for a single block format. For a multi-block with children format, specify the format as a block tree elsewhere in your graph, then copy and paste the block reference to the format field.
 
-#### `Calendar Event Filter` 
+#### `Calendar Event Filter`
 
 An optional regular expression you could use to filter for events based on the summary or description.
 
