@@ -38,6 +38,10 @@ import getSubTree from "roamjs-components/util/getSubTree";
 import createPage from "roamjs-components/writes/createPage";
 import extractRef from "roamjs-components/util/extractRef";
 
+type ExtendedInputTextNode = InputTextNode & {
+  event?: Event;
+};
+
 const GOOGLE_COMMAND = "Import Google Calendar";
 export const DEFAULT_FORMAT = `{summary} ({start:hh:mm a} - {end:hh:mm a}){confLink}`;
 
@@ -249,18 +253,24 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
             if (events.length === 0 && errors.length === 0) {
               return [{ text: EMPTY_MESSAGE }];
             }
-            return [
-              ...events
-                .filter((e) => !skipFree || e.transparency !== "transparent")
-                .filter(
-                  (e) =>
-                    !(e.attendees || []).some(
-                      (a) => a.self && a.responseStatus === "declined"
-                    )
-                )
-                .map((e) => blockFormatEvent(e, format)),
-              ...errors.map((e) => ({ text: e })),
-            ];
+            const filteredEvents = events
+              .filter((e) => !skipFree || e.transparency !== "transparent")
+              .filter(
+                (e) =>
+                  !(e.attendees || []).some(
+                    (a) => a.self && a.responseStatus === "declined"
+                  )
+              );
+            const eventInputTextNodes: ExtendedInputTextNode[] =
+              filteredEvents.map((e) => {
+                const inputTextNode = blockFormatEvent(e, format);
+                return {
+                  ...inputTextNode,
+                  event: e,
+                };
+              });
+            const errorNodes = errors.map((e) => ({ text: e }));
+            return [...eventInputTextNodes, ...errorNodes];
           });
       };
 
