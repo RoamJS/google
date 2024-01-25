@@ -486,6 +486,9 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
         return getPageTitleByBlockUid(uid) || getPageTitleByPageUid(uid);
       };
 
+      window.roamjs.extension.google = {
+        fetchGoogleCalendar,
+      };
       unloads.add(
         registerSmartBlocksCommand({
           text: "GOOGLECALENDAR",
