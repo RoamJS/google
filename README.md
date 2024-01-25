@@ -55,16 +55,18 @@ Fetches events from the user's Google Calendar(s) for a specified date range.
 **Syntax**
 
 ```javascript
-window.roamjs.extension.google.fetchGoogleCalendar(
+window.roamjs.extension.google.fetchGoogleCalendar({
   startDatePageTitle,
-  endDatePageTitle
-);
+  endDatePageTitle,
+});
 ```
 
 **Parameters**
 
-- `startDatePageTitle` (optional) - A string representing the title of the page that corresponds to the start date of the desired events. The date should be in a format recognized by Roam's `window.roamAlphaAPI.util.pageTitleToDate` utility. If not provided, the current focused page title is used as the start date.
-- `endDatePageTitle` (optional) - A string representing the title of the page that corresponds to the end date of the desired events. The date should be in a format recognized by Roam's `window.roamAlphaAPI.util.pageTitleToDate` utility. If not provided, the start date is used as the end date.
+The function accepts a single object parameter with the following optional properties:
+
+- `startDatePageTitle` - A string representing the title of the page that corresponds to the start date of the desired events. The date should be in a format recognized by Roam's `window.roamAlphaAPI.util.pageTitleToDate` utility. If not provided, the current focused page title is used as the start date.
+- `endDatePageTitle` - A string representing the title of the page that corresponds to the end date of the desired events. The date should be in a format recognized by Roam's `window.roamAlphaAPI.util.pageTitleToDate` utility. If not provided, the start date is used as the end date.
 
 **Returns**
 
@@ -81,7 +83,10 @@ interface InputTextNode {
 
 ```javascript
 window.roamjs.extension.google
-  .fetchGoogleCalendar("January 1st, 2024", "January 31st, 2024")
+  .fetchGoogleCalendar({
+    startDatePageTitle: "January 1st, 2024",
+    endDatePageTitle: "January 31st, 2024",
+  })
   .then((events) => console.log(events))
   .catch((error) => console.error(error));
 ```
