@@ -129,12 +129,15 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
           ? getPageTitleByHtmlElement(document.activeElement)?.textContent || ""
           : "";
 
-      const fetchGoogleCalendar = async (
+      const fetchGoogleCalendar = async ({
         startDatePageTitle = getActiveDatePageTitle(),
         endDatePageTitle = startDatePageTitle
           ? startDatePageTitle
-          : getActiveDatePageTitle()
-      ): Promise<InputTextNode[]> => {
+          : getActiveDatePageTitle(),
+      }: {
+        startDatePageTitle?: string;
+        endDatePageTitle?: string;
+      }): Promise<InputTextNode[]> => {
         const calendarIds = getCalendarIds();
         if (!calendarIds.length) {
           return [
@@ -271,7 +274,9 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
       callback: () => {*/
         updateBlock({ text: "Loading...", uid: blockUid });
         const parentUid = getParentUidByBlockUid(blockUid);
-        fetchGoogleCalendar(getPageTitleByPageUid(parentUid))
+        fetchGoogleCalendar({
+          startDatePageTitle: getPageTitleByPageUid(parentUid),
+        })
           .then((blocks) => pushBlocks(blocks, blockUid, parentUid))
           .then(() => setTimeout(refreshEventUids, 1));
         /*  },
@@ -318,11 +323,11 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
           "";
         return loadBlockUid(parentUid)
           .then((blockUid) =>
-            fetchGoogleCalendar(getPageTitleByPageUid(parentUid)).then(
-              (blocks) => {
-                pushBlocks(blocks, blockUid, getParentUidByBlockUid(blockUid));
-              }
-            )
+            fetchGoogleCalendar({
+              startDatePageTitle: getPageTitleByPageUid(parentUid),
+            }).then((blocks) => {
+              pushBlocks(blocks, blockUid, getParentUidByBlockUid(blockUid));
+            })
           )
           .then(() => setTimeout(refreshEventUids, 1));
       };
@@ -525,10 +530,13 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
 
               const nlpStartDate = getNlpDate(start);
               const nlpEndDate = getNlpDate(end);
-              const startDate = dateToPageTitle(nlpStartDate);
-              const endDate = dateToPageTitle(nlpEndDate);
+              const startDatePageTitle = dateToPageTitle(nlpStartDate);
+              const endDatePageTitle = dateToPageTitle(nlpEndDate);
 
-              return fetchGoogleCalendar(startDate, endDate).then((bullets) => {
+              return fetchGoogleCalendar({
+                startDatePageTitle,
+                endDatePageTitle,
+              }).then((bullets) => {
                 setTimeout(refreshEventUids, 1000);
                 if (bullets.length) {
                   return bullets;
