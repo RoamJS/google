@@ -70,13 +70,45 @@ The function accepts a single object parameter with the following optional prope
 
 **Returns**
 
-A Promise that resolves to an array of `InputTextNode[]`. Each InputTextNode represents an event fetched from Google Calendar, formatted according to the user's settings. The structure of an InputTextNode is as follows:
+A Promise that resolves to an array of `ExtendedInputTextNode[]`. Each ExtendedInputTextNode represents an event fetched from Google Calendar, formatted according to the user's settings.
 
 ```typescript
-interface InputTextNode {
+type ExtendedInputTextNode = {
   text: string;
   children?: InputTextNode[];
-}
+  event?: Event;
+};
+
+type InputTextNode = {
+  text: string;
+  children?: InputTextNode[];
+  uid?: string;
+  heading?: number;
+  textAlign?: TextAlignment;
+  viewType?: ViewType;
+  open?: boolean;
+  props?: Record<string, unknown>;
+};
+
+type Event = {
+  id: string;
+  transparency: "transparent" | "opaque";
+  summary: string;
+  description?: string;
+  htmlLink: string;
+  hangoutLink: string;
+  location: string;
+  attendees?: {
+    displayName?: string;
+    email: string;
+    self: boolean;
+    responseStatus: "declined" | "accepted";
+  }[];
+  start: { dateTime: string };
+  end: { dateTime: string };
+  visibility?: "private" | "public";
+  calendar: string;
+};
 ```
 
 **Example**
