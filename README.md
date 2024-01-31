@@ -113,7 +113,7 @@ Specifies the text to add for each calendar event. The following placeholders ar
 - `{description}` - the description of the event
 - `{link}` - the link for the event
 - `{hangout}` - the hangout link for the event
-- `{confLink}` - a conference link for the event (labeled 'Meet' or 'Zoom' as appropriate)
+- `{confLink}` - a conference link for the event (labeled 'Meet', 'Zoom', or 'Teams' as appropriate)
 - `{location}` - the location for the event
 - `{start}` - the start time of the event. Add a colon and format to customize the start time format. For example, `{start:hh:mm}` will resolve to `12:00`. See the [date-fns library](https://date-fns.org/v2.22.1/docs/format) for more details on time formats.
 - `{end}` - the end time of the event. Add a colon and format to customize the end time format. For example, `{end:hh:mmaaaaa}` will resolve to `12:00p`. See the [date-fns library](https://date-fns.org/v2.22.1/docs/format) for more details on time formats.
