@@ -25,7 +25,7 @@ import updateBlock from "roamjs-components/writes/updateBlock";
 import addYears from "date-fns/addYears";
 import apiPut from "roamjs-components/util/apiPut";
 import apiPost from "roamjs-components/util/apiPost";
-import type { Event } from "../utils/event";
+import type { CalenderEvent } from "../utils/event";
 
 type Props = {
   calendar?: {
@@ -180,7 +180,10 @@ const CreateEventDialog = ({
                           calendarId
                         )}/events${edit ? `/${edit}` : ""}`,
                       };
-                      (edit ? apiPut<Event>(args) : apiPost<Event>(args))
+                      (edit
+                        ? apiPut<CalenderEvent>(args)
+                        : apiPost<CalenderEvent>(args)
+                      )
                         .then((r) => {
                           if (!edit) {
                             if (blockUid)

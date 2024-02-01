@@ -29,7 +29,7 @@ import addMinutes from "date-fns/addMinutes";
 import getAccessToken from "../utils/getAccessToken";
 import CreateEventDialog from "../components/CreateEventDialog";
 import renderOverlay from "roamjs-components/util/renderOverlay";
-import { blockFormatEvent, Event } from "../utils/event";
+import { blockFormatEvent, CalenderEvent } from "../utils/event";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getUidsFromButton from "roamjs-components/dom/getUidsFromButton";
 import parseNlpDate from "roamjs-components/date/parseNlpDate";
@@ -37,6 +37,10 @@ import { DAILY_NOTE_PAGE_REGEX } from "roamjs-components/date/constants";
 import getSubTree from "roamjs-components/util/getSubTree";
 import createPage from "roamjs-components/writes/createPage";
 import extractRef from "roamjs-components/util/extractRef";
+
+type ExtendedInputTextNode = InputTextNode & {
+  event?: CalenderEvent;
+};
 
 const GOOGLE_COMMAND = "Import Google Calendar";
 export const DEFAULT_FORMAT = `{summary} ({start:hh:mm a} - {end:hh:mm a}){confLink}`;
@@ -185,7 +189,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
               .then((Authorization) =>
                 Authorization
                   ? apiGet<{
-                      items: Event[];
+                      items: CalenderEvent[];
                     }>({
                       authorization: `Bearer ${Authorization}`,
                       domain: "https://www.googleapis.com",
@@ -198,7 +202,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
                       error: "",
                     }))
                   : Promise.resolve({
-                      items: [] as Event[],
+                      items: [] as CalenderEvent[],
                       calendar,
                       error: `${UNAUTHORIZED_MESSAGE}${
                         account ? ` for account ${account}` : ""
@@ -206,7 +210,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
                     })
               )
               .catch((e) => ({
-                items: [] as Event[],
+                items: [] as CalenderEvent[],
                 calendar,
                 error: `Error for calendar ${calendar}: ${
                   e?.error?.code === "404"
@@ -249,18 +253,24 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
             if (events.length === 0 && errors.length === 0) {
               return [{ text: EMPTY_MESSAGE }];
             }
-            return [
-              ...events
-                .filter((e) => !skipFree || e.transparency !== "transparent")
-                .filter(
-                  (e) =>
-                    !(e.attendees || []).some(
-                      (a) => a.self && a.responseStatus === "declined"
-                    )
-                )
-                .map((e) => blockFormatEvent(e, format)),
-              ...errors.map((e) => ({ text: e })),
-            ];
+            const filteredEvents = events
+              .filter((e) => !skipFree || e.transparency !== "transparent")
+              .filter(
+                (e) =>
+                  !(e.attendees || []).some(
+                    (a) => a.self && a.responseStatus === "declined"
+                  )
+              );
+            const eventInputTextNodes: ExtendedInputTextNode[] =
+              filteredEvents.map((e) => {
+                const inputTextNode = blockFormatEvent(e, format);
+                return {
+                  ...inputTextNode,
+                  event: e,
+                };
+              });
+            const errorNodes = errors.map((e) => ({ text: e }));
+            return [...eventInputTextNodes, ...errorNodes];
           });
       };
 
@@ -393,7 +403,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
                 const text = getTextByBlockUid(blockUid);
                 const eventId = GCAL_EVENT_REGEX.exec(text)?.[1] || "";
                 const edit = window.atob(eventId).split(" ")[0];
-                return apiGet<{ data: Event }>({
+                return apiGet<{ data: CalenderEvent }>({
                   domain: `https://www.googleapis.com`,
                   path: `calendar/v3/calendars/${encodeURIComponent(
                     c.calendar
@@ -454,7 +464,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
                   const text = getTextByBlockUid(blockUid);
                   const eventId = GCAL_EVENT_REGEX.exec(text)?.[1] || "";
                   const edit = window.atob(eventId).split(" ")[0];
-                  return apiGet<{ data: Event }>({
+                  return apiGet<{ data: CalenderEvent }>({
                     domain: `https://www.googleapis.com`,
                     path: `calendar/v3/calendars/${encodeURIComponent(
                       c.calendar

@@ -4,7 +4,7 @@ import type { InputTextNode } from "roamjs-components/types/native";
 
 const DEFAULT_DATE_FORMAT = "hh:mm a";
 
-export type Event = {
+export type CalenderEvent = {
   id: string;
   transparency: "transparent" | "opaque";
   summary: string;
@@ -32,7 +32,7 @@ const resolveDate = (d: { dateTime?: string; format?: string }) => {
   return format(date, d?.format || DEFAULT_DATE_FORMAT);
 };
 
-const resolveAttendees = (e: Event, s: string) => {
+const resolveAttendees = (e: CalenderEvent, s: string) => {
   return (e.attendees || [])
     .map((attn) =>
       (s || "NAME").replace(/NAME/g, attn["displayName"] || attn["email"])
@@ -40,11 +40,11 @@ const resolveAttendees = (e: Event, s: string) => {
     .join(", ");
 };
 
-const resolveSummary = (e: Event) =>
+const resolveSummary = (e: CalenderEvent) =>
   e.visibility === "private" ? "busy" : e.summary || "No Summary";
 
 export const blockFormatEvent = (
-  e: Event,
+  e: CalenderEvent,
   format: InputTextNode
 ): InputTextNode => {
   const summary = resolveSummary(e);
