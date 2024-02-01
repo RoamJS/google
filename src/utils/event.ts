@@ -48,10 +48,16 @@ export const blockFormatEvent = (
   format: InputTextNode
 ): InputTextNode => {
   const summary = resolveSummary(e);
-  const meetLink = e.hangoutLink ? ` - [Meet](${e.hangoutLink})` : "";
+
+  const teamsLinkExtract =
+    e.description?.match(
+      /https:\/\/teams\.live\.com\/meet\/[\w\/?=+-]+/
+    )?.[0] || "";
+  const teamsLink = teamsLinkExtract ? `[Teams](${teamsLinkExtract})` : "";
+  const meetLink = e.hangoutLink ? `[Meet](${e.hangoutLink})` : "";
   const zoomLink =
     e.location && e.location.indexOf("zoom.us") > -1
-      ? ` - [Zoom](${e.location})`
+      ? `[Zoom](${e.location})`
       : "";
   return {
     text: format.text
@@ -66,7 +72,7 @@ export const blockFormatEvent = (
       .replace(/{summary}/g, summary)
       .replace(/{link}/g, e.htmlLink || "")
       .replace(/{hangout}/g, e.hangoutLink || "")
-      .replace(/{confLink}/g, meetLink + zoomLink || "")
+      .replace(/{confLink}/g, meetLink + zoomLink + teamsLink || "")
       .replace(/{location}/g, e.location || "")
       .replace(/{attendees:?(.*?)}/g, (_, format) =>
         resolveAttendees(e, format)
