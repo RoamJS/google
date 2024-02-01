@@ -76,7 +76,7 @@ A Promise that resolves to an array of `ExtendedInputTextNode[]`. Each ExtendedI
 type ExtendedInputTextNode = {
   text: string;
   children?: InputTextNode[];
-  event?: Event;
+  event?: CalenderEvent;
 };
 
 type InputTextNode = {
@@ -90,7 +90,7 @@ type InputTextNode = {
   props?: Record<string, unknown>;
 };
 
-type Event = {
+type CalenderEvent = {
   id: string;
   transparency: "transparent" | "opaque";
   summary: string;
