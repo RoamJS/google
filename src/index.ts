@@ -34,7 +34,7 @@ export default runExtension(async (args) => {
               service: "google",
               getPopoutUrl: () =>
                 Promise.resolve(
-                  `https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&client_id=${GOOGLE_CLIENT_ID}&response_type=code&scope=${scopes}&redirect_uri=https://samepage.network/oauth/google?anonymous=true&`
+                  `https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&client_id=${GOOGLE_CLIENT_ID}&response_type=code&scope=${scopes}&redirect_uri=https://samepage.network/oauth/google?anonymous=true`
                 ),
               getAuthData: (data: string) =>
                 apiPost({
