@@ -5,7 +5,7 @@ import localStorageSet from "roamjs-components/util/localStorageSet";
 import apiPost from "roamjs-components/util/apiPost";
 
 export const GOOGLE_CLIENT_ID =
-  "950860433572-rvt5aborg8raln483ogada67n201quvh.apps.googleusercontent.com";
+  "298137537514-h7nba12h91mrqq5g3348682lm3fs30hu.apps.googleusercontent.com";
 
 const getAccessToken = (label?: string) => {
   const oauth = getOauth("google", label);
