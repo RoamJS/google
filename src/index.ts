@@ -47,6 +47,8 @@ export default runExtension(async (args) => {
                   },
                 }),
               ServiceIcon: GoogleLogo,
+              // @ts-ignore - patch package for now
+              isLegacy: false,
             }),
         },
       },
