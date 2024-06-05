@@ -6,7 +6,8 @@
   "scripts": {
     "start": "samepage dev",
     "prebuild:roam": "npm install",
-    "build:roam": "samepage build --dry"
+    "build:roam": "samepage build --dry",
+    "postinstall": "npx patch-package"
   },
   "license": "MIT",
   "devDependencies": {
