@@ -80,3 +80,30 @@ index 68d96d2..543ba5b 100644
      return (react_1.default.createElement("div", { style: { display: "flex" } },
          react_1.default.createElement(core_1.Button, { icon: react_1.default.createElement(core_1.Icon, { icon: react_1.default.createElement(ServiceIcon, { style: {
                          width: 15,
+diff --git a/node_modules/roamjs-components/util/handleFetch.js b/node_modules/roamjs-components/util/handleFetch.js
+index 04cbfbb..0affa50 100644
+--- a/node_modules/roamjs-components/util/handleFetch.js
++++ b/node_modules/roamjs-components/util/handleFetch.js
+@@ -3,6 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
+ const tslib_1 = require("tslib");
+ const env_1 = require("./env");
+ const getAuthorizationHeader_1 = tslib_1.__importDefault(require("./getAuthorizationHeader"));
++class FetchError extends Error {
++    constructor(message, status) {
++        super(message);
++        this.status = status;
++    }
++}
++
+ const handleFetch = (transformArgs, { method, anonymous, authorization, path, href, domain, headers = {}, buffer }) => {
+     const url = new URL(href || `${domain || (0, env_1.getApiUrlEnv)()}/${path}`);
+     const defaultHeaders = !anonymous
+@@ -18,7 +25,7 @@ const handleFetch = (transformArgs, { method, anonymous, authorization, path, hr
+                     return Promise.reject(JSON.parse(e));
+                 }
+                 catch (_a) {
+-                    return Promise.reject(new Error(e));
++                    return Promise.reject(new FetchError(e, r.status));
+                 }
+             });
+         }
