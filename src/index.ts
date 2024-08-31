@@ -13,7 +13,7 @@ const scopes = [
   "calendar.events",
   "userinfo.email",
   "drive.file",
-  "contacts.readonly", // Add this line
+  "contacts.readonly",
 ]
   .map((s) => `https://www.googleapis.com/auth/${s}`)
   .join("%20");
