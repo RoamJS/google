@@ -352,38 +352,40 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
         })
       );
 
+      const addGoogleCalendarEventCommand = () => {
+        const blockUid =
+          window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"] || "";
+        const children = blockUid ? getBasicTreeByParentUid(blockUid) : [];
+        const props = {
+          summary: blockUid ? getTextByBlockUid(blockUid) : "No Summary",
+          ...Object.fromEntries(
+            children.map((t) => {
+              const [key, value] = t.text.split("::").map((s) => s.trim());
+              const attr = key.toLowerCase();
+              return [
+                attr,
+                ["start", "end"].includes(attr) ? parseNlpDate(value) : value,
+              ];
+            })
+          ),
+        };
+        renderOverlay({
+          Overlay: CreateEventDialog,
+          props: {
+            blockUid,
+            description: "",
+            location: "",
+            start: new Date(),
+            end: addMinutes(new Date(), 30),
+            ...props,
+            getCalendarIds,
+          },
+        });
+      };
+
       window.roamAlphaAPI.ui.commandPalette.addCommand({
         label: "Add Google Calendar Event",
-        callback: () => {
-          const blockUid =
-            window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"] || "";
-          const children = blockUid ? getBasicTreeByParentUid(blockUid) : [];
-          const props = {
-            summary: blockUid ? getTextByBlockUid(blockUid) : "No Summary",
-            ...Object.fromEntries(
-              children.map((t) => {
-                const [key, value] = t.text.split("::").map((s) => s.trim());
-                const attr = key.toLowerCase();
-                return [
-                  attr,
-                  ["start", "end"].includes(attr) ? parseNlpDate(value) : value,
-                ];
-              })
-            ),
-          };
-          renderOverlay({
-            Overlay: CreateEventDialog,
-            props: {
-              blockUid,
-              description: "",
-              location: "",
-              start: new Date(),
-              end: addMinutes(new Date(), 30),
-              ...props,
-              getCalendarIds,
-            },
-          });
-        },
+        callback: addGoogleCalendarEventCommand,
       });
       unloads.add(() =>
         window.roamAlphaAPI.ui.commandPalette.removeCommand({
@@ -503,6 +505,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
 
       window.roamjs.extension.google = {
         fetchGoogleCalendar,
+        addGoogleCalendarEventCommand,
       };
       unloads.add(
         registerSmartBlocksCommand({
