@@ -1,0 +1,13 @@
+diff --git a/node_modules/roamjs-components/util/handleUrlFetch.js b/node_modules/roamjs-components/util/handleUrlFetch.js
+index 3d3c377..c609e7e 100644
+--- a/node_modules/roamjs-components/util/handleUrlFetch.js
++++ b/node_modules/roamjs-components/util/handleUrlFetch.js
+@@ -6,7 +6,7 @@ const handleFetch_1 = tslib_1.__importDefault(require("./handleFetch"));
+ const handleUrlFetch = (method) => (args, _data) => {
+     const _a = typeof args === "string" ? { path: args, data: _data } : args, { data = {} } = _a, fetchArgs = tslib_1.__rest(_a, ["data"]);
+     return (0, handleFetch_1.default)((url, init) => {
+-        if ((0, env_1.getNodeEnv)() === "development") {
++        if ((0, env_1.getNodeEnv)() === "development" && url.host.includes('roamjs')) {
+             url.searchParams.set("dev", "true");
+         }
+         Object.entries(data).forEach(([k, v]) => url.searchParams.set(k, v));
