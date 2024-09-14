@@ -6,7 +6,8 @@
   "scripts": {
     "start": "samepage dev",
     "prebuild:roam": "npm install",
-    "build:roam": "samepage build --dry"
+    "build:roam": "samepage build --dry",
+    "postinstall": "npx patch-package"
   },
   "license": "MIT",
   "devDependencies": {
@@ -14,7 +15,7 @@
   },
   "dependencies": {
     "react-resizable": "^3.0.4",
-    "roamjs-components": "^0.82.0"
+    "roamjs-components": "^0.82.14"
   },
   "samepage": {
     "extends": "./node_modules/roamjs-components/package.json"

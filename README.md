@@ -14,9 +14,9 @@ In any page, activate the Roam Command Palette by hitting CTRL+P on windows or C
 
 You can create google calendar event right from Roam! To create an event, focus on a block and then activate the Roam native command palette, and click `Create Google Calendar Event`. The dialog will prefill with the data that is in the block and its children. Use native Roam Attributes with a double colon (`::`) to specify a field and its value as children of the focused block.Click create to generate the event on your primary Google Calendar. Once successfully created, the link to the event will be added to the block. This is an example of a block and the values that will prefill the modal:
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2FQZXgJzHZB6.png?alt=media&token=b17c99f1-5b4d-4d8e-82d3-2c27dfc50d09)
+![image](https://github.com/RoamJS/google/assets/3792666/3dcc4c5a-d3f0-425a-a1f5-a24376f8ea45)
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2FIseiuxYOTq.png?alt=media&token=49c2ca42-8bb7-49da-95d5-dad0aaad9cc5)
+![image](https://github.com/RoamJS/google/assets/3792666/263d0901-ee2c-47b9-832f-bf6e49c5b7f9)
 
 ### Updating Events
 
@@ -135,7 +135,7 @@ All of these options are configurable from the Roam Depot page. If you used this
 
 #### `Linked Calendars`
 
-Specifies which calendars you would like Roam to read before importing. If you specify more than one, it will read from all of those calendars. You must use the calendar ID provided by Google which you could find in the calendar settings. This will usually be your Gmail address, such as `dvargas92495@gmail.com`. If you are logged in with multiple accounts on the `roam/js/google` page, you could specify which one each calendar is mapped to.
+Specifies which calendars you would like Roam to read before importing. If you specify more than one, it will read from all of those calendars. You must use the calendar ID provided by Google which you could find in the calendar settings. This will usually be your Gmail address, such as `support@samepage.network`. If you are logged in with multiple accounts on the `roam/js/google` page, you could specify which one each calendar is mapped to.
 
 #### `Calendar Event Format`
 
@@ -167,7 +167,7 @@ Filters out the events from your calendar that you've set to 'Free'
 
 ### DEMO
 
-<video src="https://roamjs.com/loom/47aded52527343929e6be51cbee85052.mp4" controls="controls"></video>
+https://github.com/RoamJS/google/assets/3792666/02fb910e-1ca2-48d3-bb6e-69fd52ac4ed3
 
 [View on Loom](https://www.loom.com/share/47aded52527343929e6be51cbee85052)
 
@@ -185,6 +185,6 @@ By default, files are uploaded to the `RoamJS` folder in your drive. You could c
 
 ### DEMO
 
-<video src="https://roamjs.com/loom/ce086b114ad6453194b5074c4d4f7c13.mp4" controls="controls"></video>
+https://github.com/RoamJS/google/assets/3792666/fd011c45-77aa-4e11-85b0-3ab245c7d38f
 
 [View on Loom](https://www.loom.com/share/ce086b114ad6453194b5074c4d4f7c13)
