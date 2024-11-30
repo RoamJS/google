@@ -1,0 +1,109 @@
+diff --git a/node_modules/roamjs-components/components/ExternalLogin.js b/node_modules/roamjs-components/components/ExternalLogin.js
+index 68d96d2..c7da828 100644
+--- a/node_modules/roamjs-components/components/ExternalLogin.js
++++ b/node_modules/roamjs-components/components/ExternalLogin.js
+@@ -20,7 +20,7 @@ const getTargetOrigin = () => {
+         return "https://roamjs.com";
+     }
+ };
+-const ExternalLogin = ({ onSuccess, useLocal, parentUid, service, getPopoutUrl, getAuthData, ServiceIcon, loggedIn = false, }) => {
++const ExternalLogin = ({ onSuccess, useLocal, parentUid, service, getPopoutUrl, getAuthData, ServiceIcon, loggedIn = false, isLegacy = false }) => {
+     const targetOrigin = getTargetOrigin();
+     const [loading, setLoading] = (0, react_1.useState)(false);
+     const [error, setError] = (0, react_1.useState)("");
+@@ -94,7 +94,7 @@ const ExternalLogin = ({ onSuccess, useLocal, parentUid, service, getPopoutUrl,
+                     processAuthData(e.data);
+                 }
+             };
+-            const authInterval = () => {
++            const legacyAuthInterval = () => {
+                 (0, apiPost_1.default)({
+                     path: "auth",
+                     data: {
+@@ -109,24 +109,55 @@ const ExternalLogin = ({ onSuccess, useLocal, parentUid, service, getPopoutUrl,
+                         processAuthData(auth);
+                     }
+                     else {
+-                        intervalListener = window.setTimeout(authInterval, 1000);
++                        intervalListener = window.setTimeout(legacyAuthInterval, 1000);
+                     }
+                 })
+                     .catch((e) => {
+                     var _a;
+                     if (((_a = e.response) === null || _a === void 0 ? void 0 : _a.status) !== 400) {
+-                        intervalListener = window.setTimeout(authInterval, 1000);
++                        intervalListener = window.setTimeout(legacyAuthInterval, 1000);
+                     }
+                 });
+             };
+-            authInterval();
++            let attemptCount = 0;
++            const samepageAuthInterval = () => {
++                if (attemptCount < 30) {
++                    (0, apiPost_1.default)({
++                        path: "access-token",
++                        domain: "https://api.samepage.network",
++                        data: { state },
++                    }).then((r) => {
++                        if (r.accessToken) {
++                            const key = `oauth-${service}`;
++                            (0, localStorageSet_1.default)(key, r.accessToken);
++                        } else {
++                            attemptCount++;
++                            setTimeout(samepageAuthInterval, 1000);
++                        }
++                    }).catch((e) => {
++                        if (e.status === 401) {
++                            attemptCount++;
++                            setTimeout(samepageAuthInterval, 1000);
++                        } else {
++                            setError("Something went wrong.  Please contact support.");
++                        }
++                    });
++                } else {
++                    setError("Something went wrong.  Please contact support.");
++                }
++            };
++            if (isLegacy) {
++                legacyAuthInterval();
++            } else {
++                samepageAuthInterval();
++            }
+             window.addEventListener("message", messageEventListener);
+         })
+             .catch((e) => {
+             setError(e.message);
+             setLoading(false);
+         });
+-    }, [onSuccess, parentUid, setLoading, setError]);
++    }, [onSuccess, parentUid, setLoading, setError, isLegacy]);
+     return (react_1.default.createElement("div", { style: { display: "flex" } },
+         react_1.default.createElement(core_1.Button, { icon: react_1.default.createElement(core_1.Icon, { icon: react_1.default.createElement(ServiceIcon, { style: {
+                         width: 15,
+diff --git a/node_modules/roamjs-components/util/handleFetch.js b/node_modules/roamjs-components/util/handleFetch.js
+index 04cbfbb..0affa50 100644
+--- a/node_modules/roamjs-components/util/handleFetch.js
++++ b/node_modules/roamjs-components/util/handleFetch.js
+@@ -3,6 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
+ const tslib_1 = require("tslib");
+ const env_1 = require("./env");
+ const getAuthorizationHeader_1 = tslib_1.__importDefault(require("./getAuthorizationHeader"));
++class FetchError extends Error {
++    constructor(message, status) {
++        super(message);
++        this.status = status;
++    }
++}
++
+ const handleFetch = (transformArgs, { method, anonymous, authorization, path, href, domain, headers = {}, buffer }) => {
+     const url = new URL(href || `${domain || (0, env_1.getApiUrlEnv)()}/${path}`);
+     const defaultHeaders = !anonymous
+@@ -18,7 +25,7 @@ const handleFetch = (transformArgs, { method, anonymous, authorization, path, hr
+                     return Promise.reject(JSON.parse(e));
+                 }
+                 catch (_a) {
+-                    return Promise.reject(new Error(e));
++                    return Promise.reject(new FetchError(e, r.status));
+                 }
+             });
+         }
