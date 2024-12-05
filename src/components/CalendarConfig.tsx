@@ -18,14 +18,28 @@ const CalendarConfig = (props: OnloadArgs): React.ReactElement => {
   );
   return (
     <div className="flex flex-col gap-1" style={{ minWidth: 300 }}>
-      <div style={{ display: "flex" }}>
+      <div className="flex flex-col gap-2">
         <InputGroup
           value={calendar}
           onChange={(e) => setCalendar(e.target.value)}
           style={{ minWidth: "unset" }}
+          rightElement={
+            <Button
+              icon={"plus"}
+              minimal
+              disabled={!calendar}
+              onClick={() => {
+                const value = [...calendars, { calendar, account }];
+                setCalendars(value);
+                setCalendar("");
+                extensionAPI.settings.set("calendars", value);
+              }}
+            />
+          }
         />
+
         {accounts.length > 1 && (
-          <div style={{ margin: "0 4px" }}>
+          <div>
             <MenuItemSelect
               items={accounts}
               activeItem={account}
@@ -33,17 +47,6 @@ const CalendarConfig = (props: OnloadArgs): React.ReactElement => {
             />
           </div>
         )}
-        <Button
-          icon={"plus"}
-          minimal
-          disabled={!calendar}
-          onClick={() => {
-            const value = [...calendars, { calendar, account }];
-            setCalendars(value);
-            setCalendar("");
-            extensionAPI.settings.set("calendars", value);
-          }}
-        />
       </div>
       {calendars.map((p, i) => (
         <div
