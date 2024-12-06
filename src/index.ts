@@ -6,13 +6,14 @@ import CalendarConfig from "./components/CalendarConfig";
 import loadGoogleCalendar, { DEFAULT_FORMAT } from "./services/calendar";
 import loadGoogleDrive from "./services/drive";
 import GoogleLogo from "./components/GoogleLogo";
-
+import { fetchGoogleContacts, FormattedContact } from "./services/people";
 
 const scopes = [
   "calendar.readonly",
   "calendar.events",
   "userinfo.email",
   "drive.file",
+  "contacts.readonly",
 ]
   .map((s) => `https://www.googleapis.com/auth/${s}`)
   .join("%20");
@@ -107,11 +108,33 @@ export default runExtension(async (args) => {
 
     toggleGoogleCalendar(true);
     toggleGoogleDrive(!!args.extensionAPI.settings.get("drive-enabled"));
+
+    // Expose Google API functions
+    if (!window.roamjs.extension.google) {
+      window.roamjs.extension.google = {};
+    }
+    window.roamjs.extension.google.fetchGoogleContacts = fetchGoogleContacts;
+
     return {
       unload: () => {
         toggleGoogleCalendar(false);
         toggleGoogleDrive(false);
+        delete window.roamjs.extension.google.fetchGoogleContacts;
       },
     };
   },
 );
+
+// Add type declarations
+declare global {
+  interface Window {
+    roamjs: {
+      extension: {
+        google: {
+          fetchGoogleCalendar?: (options: any) => Promise<any>;
+          fetchGoogleContacts?: () => Promise<FormattedContact[]>;
+        };
+      };
+    };
+  }
+}
