@@ -1,6 +1,12 @@
+<a href="https://roamjs.com/">
+    <img src="https://avatars.githubusercontent.com/u/138642184" alt="RoamJS Logo" title="RoamJS" align="right" height="60" />
+</a>
+
 # Google
 
-Connect various Google services to your Roam graph!
+**Connect Google Calendar + Drive to Roam. Import daily events, create/update Calendar events from blocks, and optionally intercept file uploads to Drive with inline previews for images, PDFs, and videos.**
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/RoamJS/google)
 
 ## Setup
 
