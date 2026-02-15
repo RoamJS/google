@@ -15,6 +15,7 @@ const getAccessToken = (label?: string) => {
     );
     return tokenAge > expires_in
       ? apiPost({
+          domain: "https://roamjs.com",
           path: `google-auth`,
           data: {
             refresh_token,

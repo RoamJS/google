@@ -1,0 +1,221 @@
+import React, { useCallback, useMemo, useState } from "react";
+import apiPost from "roamjs-components/util/apiPost";
+import localStorageGet from "roamjs-components/util/localStorageGet";
+import localStorageSet from "roamjs-components/util/localStorageSet";
+import GoogleLogo from "./GoogleLogo";
+
+type OauthAccount = {
+  uid: string;
+  text: string;
+  data: string;
+  time: number;
+};
+
+const OAUTH_KEY = "oauth-google";
+const ROAMJS_ORIGIN = "https://roamjs.com";
+const REDIRECT_URI = `${ROAMJS_ORIGIN}/oauth?auth=true`;
+const GOOGLE_CLIENT_ID =
+  "950860433572-rvt5aborg8raln483ogada67n201quvh.apps.googleusercontent.com";
+
+const getAccounts = (): OauthAccount[] => {
+  try {
+    return JSON.parse(localStorageGet(OAUTH_KEY) || "[]");
+  } catch {
+    return [];
+  }
+};
+
+const setAccounts = (accounts: OauthAccount[]) =>
+  localStorageSet(OAUTH_KEY, JSON.stringify(accounts));
+
+const createState = () =>
+  `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+const createUid = () =>
+  window.roamAlphaAPI?.util?.generateUID?.() ||
+  Math.random().toString(36).slice(2, 11);
+
+const GoogleOauthPanel = ({ scopes }: { scopes: string }) => {
+  const [accounts, setLocalAccounts] = useState<OauthAccount[]>(() =>
+    getAccounts()
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const nextLabel = useMemo(
+    () => `Google Account ${accounts.length + 1}`,
+    [accounts.length]
+  );
+
+  const removeAccount = useCallback((uid: string) => {
+    setLocalAccounts((previous) => {
+      const next = previous.filter((a) => a.uid !== uid);
+      setAccounts(next);
+      return next;
+    });
+  }, []);
+
+  const login = useCallback(() => {
+    const state = createState();
+    setError("");
+    setLoading(true);
+
+    const url =
+      "https://accounts.google.com/o/oauth2/v2/auth?" +
+      `prompt=consent&access_type=offline&client_id=${GOOGLE_CLIENT_ID}` +
+      `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
+      `&response_type=code&scope=${scopes}&state=${encodeURIComponent(state)}`;
+
+    const width = 600;
+    const height = 525;
+    const left = window.screenX + (window.innerWidth - width) / 2;
+    const top = window.screenY + (window.innerHeight - height) / 2;
+    const popup = window.open(
+      url,
+      "roamjs:google:login",
+      `left=${left},top=${top},width=${width},height=${height},status=1`
+    );
+
+    if (!popup) {
+      setLoading(false);
+      setError("Popup blocked. Please allow popups and try again.");
+      return;
+    }
+
+    let closedInterval = 0;
+    const cleanup = () => {
+      window.removeEventListener("message", onMessage);
+      window.clearInterval(closedInterval);
+    };
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== ROAMJS_ORIGIN) {
+        return;
+      }
+      cleanup();
+      const raw = event.data;
+      let payload: Record<string, string> = {};
+      if (typeof raw === "string") {
+        try {
+          payload = JSON.parse(raw || "{}") as Record<string, string>;
+        } catch {
+          setLoading(false);
+          setError("Invalid OAuth response from callback page.");
+          return;
+        }
+      } else if (raw && typeof raw === "object") {
+        payload = raw as Record<string, string>;
+      }
+
+      if (payload.state !== state) {
+        setLoading(false);
+        setError("OAuth state mismatch. Please try again.");
+        return;
+      }
+      if (payload.error) {
+        setLoading(false);
+        setError(payload.error);
+        return;
+      }
+      if (!payload.code) {
+        setLoading(false);
+        setError("Did not receive an authorization code from Google.");
+        return;
+      }
+
+      apiPost({
+        anonymous: true,
+        domain: ROAMJS_ORIGIN,
+        path: "google-auth",
+        data: {
+          ...payload,
+          grant_type: "authorization_code",
+        },
+      })
+        .then((tokenData) => {
+          const label =
+            typeof tokenData?.label === "string" && tokenData.label
+              ? tokenData.label
+              : nextLabel;
+          const account: OauthAccount = {
+            uid: createUid(),
+            text: label,
+            data: JSON.stringify(tokenData),
+            time: Date.now(),
+          };
+          setLocalAccounts((previous) => {
+            const next = [...previous, account];
+            setAccounts(next);
+            return next;
+          });
+        })
+        .catch((e) => {
+          setError(
+            e?.message ||
+              "Failed to exchange OAuth code. Please try again in a moment."
+          );
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    };
+
+    window.addEventListener("message", onMessage);
+    closedInterval = window.setInterval(() => {
+      if (popup.closed) {
+        cleanup();
+        setLoading(false);
+      }
+    }, 400);
+  }, [nextLabel, scopes]);
+
+  return (
+    <div className="flex flex-col gap-2" style={{ minWidth: 300 }}>
+      <button
+        className="bp3-button bp3-minimal"
+        onClick={login}
+        disabled={loading}
+      >
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 15, height: 15, display: "inline-flex" }}>
+            <GoogleLogo />
+          </span>
+          {loading
+            ? "Connecting..."
+            : accounts.length
+              ? "Add Another Google Account"
+              : "Login With Google"}
+        </span>
+      </button>
+      {!!accounts.length && (
+        <>
+          <h5 className="margin-0">Accounts</h5>
+          <ul className="margin-0">
+            {accounts.map((a) => (
+              <li
+                key={a.uid}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: 8,
+                }}
+              >
+                <span style={{ minWidth: 192 }}>{a.text}</span>
+                <button
+                  className="bp3-button bp3-small"
+                  onClick={() => removeAccount(a.uid)}
+                >
+                  Log Out
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {!!error && <div style={{ color: "red", whiteSpace: "pre-line" }}>{error}</div>}
+    </div>
+  );
+};
+
+export default GoogleOauthPanel;
