@@ -1,11 +1,9 @@
 import React from "react";
 import runExtension from "roamjs-components/util/runExtension";
-import OauthPanel from "roamjs-components/components/OauthPanel";
-import apiPost from "roamjs-components/util/apiPost";
 import CalendarConfig from "./components/CalendarConfig";
 import loadGoogleCalendar, { DEFAULT_FORMAT } from "./services/calendar";
 import loadGoogleDrive from "./services/drive";
-import GoogleLogo from "./components/GoogleLogo";
+import GoogleOauthPanel from "./components/GoogleOauthPanel";
 
 
 const scopes = [
@@ -29,24 +27,7 @@ export default runExtension(async (args) => {
           description: "Log into Google to connect your account to Roam!",
           action: {
             type: "reactComponent",
-            component: () =>
-              React.createElement(OauthPanel, {
-                service: "google",
-                getPopoutUrl: () =>
-                  Promise.resolve(
-                    `https://accounts.google.com/o/oauth2/v2/auth?prompt=consent&access_type=offline&client_id=950860433572-rvt5aborg8raln483ogada67n201quvh.apps.googleusercontent.com&redirect_uri=https://roamjs.com/oauth?auth=true&response_type=code&scope=${scopes}`
-                  ),
-                getAuthData: (data: string) =>
-                  apiPost({
-                    anonymous: true,
-                    path: "google-auth",
-                    data: {
-                      ...JSON.parse(data),
-                      grant_type: "authorization_code",
-                    },
-                  }),
-                ServiceIcon: GoogleLogo,
-              }),
+            component: () => React.createElement(GoogleOauthPanel, { scopes }),
           },
         },
         {
