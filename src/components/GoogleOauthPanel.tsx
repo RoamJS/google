@@ -14,6 +14,7 @@ type OauthAccount = {
 const OAUTH_KEY = "oauth-google";
 const ROAMJS_ORIGIN = "https://roamjs.com";
 const REDIRECT_URI = `${ROAMJS_ORIGIN}/oauth?auth=true`;
+const OAUTH_TIMEOUT_MS = 2 * 60 * 1000;
 const GOOGLE_CLIENT_ID =
   "950860433572-rvt5aborg8raln483ogada67n201quvh.apps.googleusercontent.com";
 
@@ -28,8 +29,29 @@ const getAccounts = (): OauthAccount[] => {
 const setAccounts = (accounts: OauthAccount[]) =>
   localStorageSet(OAUTH_KEY, JSON.stringify(accounts));
 
-const createState = () =>
+const createNonce = () =>
   `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+const encodeState = (value: unknown) => {
+  const json = JSON.stringify(value);
+  return window
+    .btoa(json)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+};
+
+const createState = () => {
+  const nonce = createNonce();
+  try {
+    return encodeState({
+      nonce,
+      origin: window.location.origin,
+    });
+  } catch {
+    return nonce;
+  }
+};
 
 const createUid = () =>
   window.roamAlphaAPI?.util?.generateUID?.() ||
@@ -72,7 +94,7 @@ const GoogleOauthPanel = ({ scopes }: { scopes: string }) => {
     const top = window.screenY + (window.innerHeight - height) / 2;
     const popup = window.open(
       url,
-      "roamjs:google:login",
+      "roamjs_google_login",
       `left=${left},top=${top},width=${width},height=${height},status=1`
     );
 
@@ -82,10 +104,10 @@ const GoogleOauthPanel = ({ scopes }: { scopes: string }) => {
       return;
     }
 
-    let closedInterval = 0;
+    let timeoutId = 0;
     const cleanup = () => {
       window.removeEventListener("message", onMessage);
-      window.clearInterval(closedInterval);
+      window.clearTimeout(timeoutId);
     };
 
     const onMessage = (event: MessageEvent) => {
@@ -161,12 +183,14 @@ const GoogleOauthPanel = ({ scopes }: { scopes: string }) => {
     };
 
     window.addEventListener("message", onMessage);
-    closedInterval = window.setInterval(() => {
-      if (popup.closed) {
-        cleanup();
-        setLoading(false);
-      }
-    }, 400);
+    popup.focus();
+    timeoutId = window.setTimeout(() => {
+      cleanup();
+      setLoading(false);
+      setError(
+        "Google login timed out or was closed before completing. Please try again."
+      );
+    }, OAUTH_TIMEOUT_MS);
   }, [nextLabel, scopes]);
 
   return (
