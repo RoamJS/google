@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Account Connected - RoamJS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @keyframes cursorBlink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            text-align: center;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .logo-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 32px;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 16px;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        .checkmark {
+            position: absolute;
+            top: -8px;
+            right: -12px;
+            width: 32px;
+            height: 32px;
+        }
+
+        .checkmark circle { fill: #222222; }
+        .checkmark path {
+            stroke: white;
+            stroke-width: 4;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #37352f;
+            margin-bottom: 12px;
+            letter-spacing: -0.03em;
+        }
+
+        p { font-size: 16px; color: #787774; line-height: 1.5; }
+
+        .roam-wrapper {
+            display: inline-block;
+            position: relative;
+        }
+
+        .roam-badge {
+            display: inline-block;
+            background: #f7f6f3;
+            border: 1px solid #e3e2e0;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+            font-size: 14px;
+            color: #37352f;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 3px;
+            height: 17px;
+            background: #222222;
+            margin-left: 2px;
+            vertical-align: text-bottom;
+            animation: cursorBlink 1.2s step-end infinite;
+        }
+
+        .sharpie-underlines {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0px;
+            height: 6px;
+        }
+
+        .sharpie-underlines svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .error {
+            margin-top: 16px;
+            color: #e53e3e;
+            font-size: 14px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-wrapper">
+            <img
+                class="logo"
+                src="https://avatars.githubusercontent.com/u/138642184"
+                alt="RoamJS"
+                draggable="false"
+            />
+            <svg class="checkmark" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="18"/>
+                <path d="M10 18l5 5 11-11"/>
+            </svg>
+        </div>
+        <h1>Google Account Connected to Roam Research</h1>
+        <p>You can now close this window and return to <span class="roam-wrapper"><span class="roam-badge">Roam<span class="cursor"></span></span><span class="sharpie-underlines"><svg viewBox="0 0 60 8" preserveAspectRatio="none">
+            <path d="M2 2.5 Q15 1.5, 30 2.8 T58 2" stroke="#222222" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <path d="M3 5.5 Q20 4.2, 35 5.8 T57 5" stroke="#222222" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg></span></span></p>
+        <p class="error" id="error"></p>
+    </div>
+
+    <script>
+        (function () {
+            var ROAMJS_ORIGIN = "https://roamjs.com";
+            var params = new URLSearchParams(window.location.search);
+            var code = params.get("code");
+            var stateRaw = params.get("state");
+            var error = params.get("error");
+
+            function showError(msg) {
+                var el = document.getElementById("error");
+                el.textContent = msg;
+                el.style.display = "block";
+            }
+
+            if (error) {
+                showError("Authorization failed: " + error);
+                return;
+            }
+
+            if (!code || !stateRaw) {
+                // Nothing to relay — just show the success page
+                return;
+            }
+
+            // Decode base64url state to check for a desktop session
+            var session = null;
+            try {
+                var b64 = stateRaw.replace(/-/g, "+").replace(/_/g, "/");
+                var pad = b64.length % 4;
+                if (pad) b64 += "====".slice(pad);
+                var stateObj = JSON.parse(atob(b64));
+                session = stateObj.session || null;
+            } catch (e) {
+                // State may be a plain nonce — not JSON. That's fine.
+            }
+
+            var payload = JSON.stringify({ code: code, state: stateRaw });
+
+            // Browser popup flow: relay via postMessage to opener
+            if (window.opener) {
+                try {
+                    window.opener.postMessage(payload, "*");
+                } catch (e) {
+                    showError("Could not communicate with Roam. Please try again.");
+                }
+                return;
+            }
+
+            // Desktop flow: store code in session endpoint for polling
+            if (session) {
+                fetch(ROAMJS_ORIGIN + "/oauth/session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        session: session,
+                        code: code,
+                        state: stateRaw,
+                        status: "completed",
+                    }),
+                }).catch(function () {
+                    showError(
+                        "Could not complete authorization for the desktop app. Please try again."
+                    );
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
