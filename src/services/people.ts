@@ -72,8 +72,11 @@ const formatBirthday = (birthday?: { date?: { year?: number; month?: number; day
   if (birthday?.text) return birthday.text;
   if (birthday?.date) {
     const { year, month, day } = birthday.date;
-    if (year && month && day) {
-      return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    if (month && day) {
+      if (year) {
+        return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      }
+      return `${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
     }
   }
   return "";
