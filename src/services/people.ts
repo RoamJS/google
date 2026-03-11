@@ -129,7 +129,7 @@ export const fetchGoogleContacts = async (): Promise<FormattedContact[]> => {
         authorization: `Bearer ${token}`,
       });
   
-      allContacts = allContacts.concat(response.connections);
+      allContacts = allContacts.concat(response.connections || []);
       nextPageToken = response.nextPageToken;
   
     } while (nextPageToken);
