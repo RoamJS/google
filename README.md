@@ -18,7 +18,9 @@ In any page, activate the Roam Command Palette by hitting CTRL+P on windows or C
 
 ### Creating Events
 
-You can create google calendar event right from Roam! To create an event, focus on a block and then activate the Roam native command palette, and click `Create Google Calendar Event`. The dialog will prefill with the data that is in the block and its children. Use native Roam Attributes with a double colon (`::`) to specify a field and its value as children of the focused block.Click create to generate the event on your primary Google Calendar. Once successfully created, the link to the event will be added to the block. This is an example of a block and the values that will prefill the modal:
+To create an event, focus a block and choose **Add Google Calendar Event** in the Roam command palette. The form prefills from the block and child attributes such as `Description::` or `Location::`. Choose the calendar and click **Create**. The extension adds the event link under the original block or page once Google Calendar confirms creation.
+
+You can close the form while saving and return with **Reopen event draft** or the same palette command. **Try again** is available after a confirmed rejection. **Check Calendar** looks up the original event when the result is uncertain. **Add Roam link** retries the Roam step using the existing event. If the original Roam page or block is gone, open the event from the form and choose **Finish without Roam link**. Draft and recovery state last while the extension is loaded.
 
 ![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2FQZXgJzHZB6.png?alt=media&token=b17c99f1-5b4d-4d8e-82d3-2c27dfc50d09)
 
@@ -194,3 +196,11 @@ By default, files are uploaded to the `RoamJS` folder in your drive. You could c
 <video src="https://roamjs.com/loom/ce086b114ad6453194b5074c4d4f7c13.mp4" controls="controls"></video>
 
 [View on Loom](https://www.loom.com/share/ce086b114ad6453194b5074c4d4f7c13)
+
+## Calendar save pilot development
+
+The create form adapts the merged RoamJS UI Lab's `FormDialog` and `useSaveOperation` pattern from `d6e618a`. This pilot implements the pattern locally with the existing Blueprint 3 controls and scoped CSS. The Depot build uses only this repository and its existing public dependencies.
+
+Creation sends a client-generated Google Calendar event ID. An inconclusive response allows a read-only lookup for that ID under the original Google login. A 404 can also mean the calendar is inaccessible, so it keeps the draft in recovery. The user can discard the draft after checking the original calendar and handling any matching event. Once Calendar returns the event, retrying the Roam link reuses the original parent and Roam block UID.
+
+Run the save adapter tests with Node 24 using `node --test tests/calendar-save.test.cjs`. Build the extension with `npm run build:roam`.

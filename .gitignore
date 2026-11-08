@@ -5,3 +5,5 @@ out
 .env.local
 .env
 extension.js
+extension.css
+/local/

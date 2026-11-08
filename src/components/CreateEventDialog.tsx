@@ -1,251 +1,292 @@
-import {
-  Button,
-  Classes,
-  Dialog,
-  InputGroup,
-  Intent,
-  Label,
-  Spinner,
-  SpinnerSize,
-} from "@blueprintjs/core";
-import React, { useCallback, useMemo, useState } from "react";
-import getSubTree from "roamjs-components/util/getSubTree";
-import MenuItemSelect from "roamjs-components/components/MenuItemSelect";
-import { DateInput } from "@blueprintjs/datetime";
-import format from "date-fns/format";
-import parse from "date-fns/parse";
+import { Button, Checkbox } from "@blueprintjs/core";
 import formatRFC3339 from "date-fns/formatRFC3339";
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import ReactDOM from "react-dom";
+import getOauth from "roamjs-components/util/getOauth";
 import getAccessToken from "../utils/getAccessToken";
-import type { RoamBasicNode } from "roamjs-components/types/native";
-import createBlock from "roamjs-components/writes/createBlock";
-import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
-import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBlockUid";
-import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
-import updateBlock from "roamjs-components/writes/updateBlock";
-import addYears from "date-fns/addYears";
-import apiPut from "roamjs-components/util/apiPut";
-import apiPost from "roamjs-components/util/apiPost";
-import type { CalenderEvent } from "../utils/event";
+import { saveCalendarEvent } from "../services/saveCalendarEvent";
+import type {
+  CalendarEventDraft,
+  SaveOutcome,
+} from "../services/saveCalendarEvent";
+import EventFields, { formatEventDate } from "./EventFields";
+import type { CalendarChoice, EventDetails } from "./EventFields";
+import FormDialog from "./FormDialog";
+import { useSaveOperation } from "./useSaveOperation";
 
-type Props = {
-  calendar?: {
-    calendar: string;
-    account: string;
+type EventRequest = {
+  details: EventDetails;
+  parentUid: string;
+  calendars: CalendarChoice[];
+};
+
+type Draft = EventRequest & { calendarId: string };
+type Launcher = { show: (request: EventRequest) => void };
+
+const getCalendarCredentials = async (
+  label?: string,
+  expectedUid?: string,
+): Promise<{ token: string; accountUid: string } | undefined> => {
+  const { node } = JSON.parse(getOauth("google", label));
+  const accountUid = node?.uid;
+  if (
+    typeof accountUid !== "string" ||
+    !accountUid ||
+    (expectedUid && expectedUid !== accountUid)
+  )
+    return;
+  const token = await getAccessToken(label);
+  if (token) return { token, accountUid };
+};
+
+const CreateEventDialog = forwardRef<Launcher>((_, ref) => {
+  const [draft, setDraft] = useState<Draft>();
+  const [open, setOpen] = useState(false);
+  const [validation, setValidation] = useState("");
+  const [checkedCalendar, setCheckedCalendar] = useState(false);
+  const summary = useRef<HTMLInputElement>(null);
+  const reopen = useRef<HTMLButtonElement>(null);
+  const restoreReopenFocus = useRef(false);
+  const operation = useSaveOperation<CalendarEventDraft>();
+  const { state } = operation;
+
+  useImperativeHandle(ref, () => ({
+    show: (request) => {
+      if (!draft || state.kind === "success") {
+        operation.reset();
+        setValidation("");
+        setDraft({
+          ...request,
+          calendarId: request.calendars[0]?.calendar || "primary",
+        });
+      }
+      setOpen(true);
+    },
+  }));
+
+  useLayoutEffect(() => {
+    if (!open && restoreReopenFocus.current) {
+      restoreReopenFocus.current = false;
+      if (document.activeElement === document.body) reopen.current?.focus();
+    }
+  }, [open]);
+
+  const discard = (): void => {
+    setOpen(false);
+    setDraft(undefined);
+    setCheckedCalendar(false);
+    setValidation("");
+    operation.reset();
   };
-  summary: string;
-  location: string;
-  description: string;
-  start: Date;
-  end: Date;
-  blockUid: string;
-  edit?: string;
-  getCalendarIds: () => {
-    calendar: string;
-    account: string;
-  }[];
-};
 
-const DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
+  const close = (): void => {
+    setCheckedCalendar(false);
+    if (state.kind === "ready") discard();
+    else {
+      restoreReopenFocus.current = true;
+      setOpen(false);
+    }
+  };
 
-const CreateEventDialog = ({
-  onClose,
-  edit,
-  calendar,
-  summary,
-  location,
-  description,
-  start,
-  end,
-  blockUid,
-  getCalendarIds,
-}: { onClose: () => void } & Props) => {
-  const [summaryState, setSummaryState] = useState(summary);
-  const [locationState, setLocationState] = useState(location);
-  const [descriptionState, setDescriptionState] = useState(description);
-  const [startState, setStartState] = useState(start);
-  const [endState, setEndState] = useState(end);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const onFocus = useCallback(() => setError(""), [setError]);
-  const calendarIds = useMemo(
-    () => (calendar ? [calendar] : getCalendarIds()),
-    []
-  );
-  const [calendarId, setCalendarId] = useState(
-    calendarIds[0]?.calendar || "primary"
-  );
+  const finish = (result: SaveOutcome | undefined): void => {
+    if (result?.kind === "success") setOpen(false);
+  };
+
+  if (!draft) return null;
+
+  const submit = (event: React.FormEvent<HTMLFormElement>): void => {
+    if (state.kind === "partial" || state.kind === "unknown") {
+      setCheckedCalendar(false);
+      void operation
+        .resume(
+          state.kind === "partial" ? "Adding link…" : "Checking Calendar…",
+        )
+        .then(finish);
+      return;
+    }
+
+    const fields = new FormData(event.currentTarget);
+    const { start, end } = draft.details;
+    if (
+      !start ||
+      !end ||
+      !Number.isFinite(start.getTime()) ||
+      !Number.isFinite(end.getTime()) ||
+      formatEventDate(start) !== fields.get("start") ||
+      formatEventDate(end) !== fields.get("end") ||
+      end <= start
+    ) {
+      setValidation("Enter a valid start and an end after the start.");
+      return;
+    }
+    const { calendarId, calendars, parentUid, details } = draft;
+    setValidation("");
+    void operation
+      .start(
+        {
+          calendarId,
+          parentUid,
+          account: calendars.find((choice) => choice.calendar === calendarId)
+            ?.account,
+          event: {
+            summary: details.summary,
+            description: details.description,
+            location: details.location,
+            start: { dateTime: formatRFC3339(start) },
+            end: { dateTime: formatRFC3339(end) },
+          },
+        },
+        (snapshot, signal) =>
+          saveCalendarEvent({
+            draft: snapshot,
+            signal,
+            getCredentials: getCalendarCredentials,
+          }),
+      )
+      .then(finish);
+  };
+
+  const labels = {
+    ready: "Create",
+    saving: state.kind === "saving" ? state.label : "",
+    failure: "Try again",
+    unknown: "Check Calendar",
+    partial: "Add Roam link",
+    success: "Create",
+  };
+  const status =
+    state.kind === "saving"
+      ? state.label
+      : "message" in state
+        ? state.message
+        : "";
+  const canEdit = state.kind === "ready" || state.kind === "failure";
+  const canDiscardAfterCheck =
+    state.kind === "unknown" && state.allowCheckedDiscard;
+
   return (
-    <Dialog
-      isOpen={true}
-      onClose={onClose}
-      canEscapeKeyClose
-      canOutsideClickClose
-      title={`${edit ? "Update" : "Create"} Google Calendar Event`}
-      enforceFocus={false}
-      autoFocus={false}
-    >
-      <div className={Classes.DIALOG_BODY}>
-        <Label>
-          Summary
-          <InputGroup
-            value={summaryState}
-            onChange={(e) => setSummaryState(e.target.value)}
-            placeholder={"Event summary"}
-            onFocus={onFocus}
-          />
-        </Label>
-        <Label>
-          Description
-          <InputGroup
-            value={descriptionState}
-            onChange={(e) => setDescriptionState(e.target.value)}
-            placeholder={"Event description"}
-            onFocus={onFocus}
-          />
-        </Label>
-        <Label>
-          Location
-          <InputGroup
-            value={locationState}
-            onChange={(e) => setLocationState(e.target.value)}
-            placeholder={"Event location"}
-            onFocus={onFocus}
-          />
-        </Label>
-        <Label>
-          Start
-          <DateInput
-            formatDate={(d) => format(d, DATE_FORMAT)}
-            parseDate={(s) => parse(s, DATE_FORMAT, new Date())}
-            value={startState}
-            onChange={(d) => setStartState(d)}
-            inputProps={{
-              onFocus,
-            }}
-            timePrecision={"minute"}
-            maxDate={addYears(new Date(), 5)}
-          />
-        </Label>
-        <Label>
-          End
-          <DateInput
-            formatDate={(d) => format(d, DATE_FORMAT)}
-            parseDate={(s) => parse(s, DATE_FORMAT, new Date())}
-            value={endState}
-            onChange={(d) => setEndState(d)}
-            inputProps={{
-              onFocus,
-            }}
-            timePrecision={"minute"}
-            maxDate={addYears(new Date(), 5)}
-          />
-        </Label>
-        {!calendar && (
-          <Label>
-            Calendar:
-            <MenuItemSelect
-              activeItem={calendarId}
-              onItemSelect={(i) => setCalendarId(i)}
-              items={calendarIds.map((c) => c.calendar)}
-            />
-          </Label>
-        )}
-      </div>
-      <div className={Classes.DIALOG_FOOTER}>
-        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <span style={{ color: "darkred" }}>{error}</span>
-          {loading && <Spinner size={SpinnerSize.SMALL} />}
-          <Button
-            text={edit ? "Update" : "Create"}
-            intent={Intent.PRIMARY}
-            onClick={() => {
-              setLoading(true);
-              setTimeout(
-                () =>
-                  getAccessToken(
-                    calendarIds.find((c) => c.calendar === calendarId)?.account
-                  ).then((token) => {
-                    if (token) {
-                      const args = {
-                        data: {
-                          summary: summaryState,
-                          description: descriptionState,
-                          location: locationState,
-                          start: { dateTime: formatRFC3339(startState) },
-                          end: { dateTime: formatRFC3339(endState) },
+    <>
+      {open && (
+        <FormDialog
+          title="Create Google Calendar Event"
+          onClose={close}
+          onSubmit={submit}
+          initialFocus={summary}
+          pending={state.kind === "saving"}
+          canSubmit={
+            canEdit ||
+            state.kind === "partial" ||
+            (state.kind === "unknown" && !!state.recover)
+          }
+          submitLabel={labels[state.kind]}
+          closeLabel={state.kind === "ready" ? "Cancel" : "Close"}
+          status={validation || status}
+          secondaryAction={
+            state.kind === "partial" ? (
+              <Button
+                type="button"
+                minimal
+                text="Finish without Roam link"
+                onClick={discard}
+              />
+            ) : (
+              (state.kind === "failure" || canDiscardAfterCheck) && (
+                <Button
+                  type="button"
+                  minimal
+                  text="Discard draft"
+                  disabled={canDiscardAfterCheck && !checkedCalendar}
+                  onClick={discard}
+                />
+              )
+            )
+          }
+        >
+          {(popupContainer) => (
+            <>
+              <fieldset disabled={!canEdit}>
+                <EventFields
+                  details={draft.details}
+                  disabled={!canEdit}
+                  onChange={(change) => {
+                    setValidation("");
+                    setDraft(
+                      (current) =>
+                        current && {
+                          ...current,
+                          details: { ...current.details, ...change },
                         },
-                        authorization: `Bearer ${token}`,
-                        domain: "https://www.googleapis.com",
-                        path: `calendar/v3/calendars/${encodeURIComponent(
-                          calendarId
-                        )}/events${edit ? `/${edit}` : ""}`,
-                      };
-                      (edit
-                        ? apiPut<CalenderEvent>(args)
-                        : apiPost<CalenderEvent>(args)
-                      )
-                        .then((r) => {
-                          if (!edit) {
-                            if (blockUid)
-                              createBlock({
-                                parentUid: blockUid,
-                                node: { text: `Link:: ${r.htmlLink}` },
-                              });
-                            else
-                              window.roamAlphaAPI.ui.mainWindow
-                                .getOpenPageOrBlockUid()
-                                .then(
-                                  (parentUid) =>
-                                    parentUid &&
-                                    createBlock({
-                                      parentUid,
-                                      node: { text: `Link:: ${r.htmlLink}` },
-                                    })
-                                );
-                          } else {
-                            const blockText = getTextByBlockUid(blockUid);
-                            const nodeChildrenUpdate = blockText.includes(
-                              summary
-                            )
-                              ? getBasicTreeByParentUid(blockUid)
-                              : getBasicTreeByParentUid(
-                                  getParentUidByBlockUid(blockUid)
-                                );
-                            const updateNode = (n: RoamBasicNode) => {
-                              const newText = n.text
-                                .replace(summary, r.summary)
-                                .replace(description, r.description || "")
-                                .replace(location, r.location);
-                              if (newText !== n.text) {
-                                updateBlock({ text: newText, uid: n.uid });
-                              }
-                              n.children.forEach(updateNode);
-                            };
-                            updateNode({
-                              text: blockText,
-                              children: nodeChildrenUpdate,
-                              uid: blockUid,
-                            });
-                          }
-                          onClose();
-                        })
-                        .catch((e) => {
-                          setError(e.response?.data?.error?.message);
-                          setLoading(false);
-                        });
-                    } else {
-                      setError("Not logged in with Google");
-                      setLoading(false);
-                    }
-                  }),
-                1
-              );
-            }}
-          />
+                    );
+                  }}
+                  summaryRef={summary}
+                  popupContainer={popupContainer}
+                  calendar={{
+                    selected: draft.calendarId,
+                    choices: draft.calendars,
+                    select: (calendarId) =>
+                      setDraft(
+                        (current) => current && { ...current, calendarId },
+                      ),
+                  }}
+                />
+              </fieldset>
+              {canDiscardAfterCheck && (
+                <Checkbox
+                  checked={checkedCalendar}
+                  label="I checked the original calendar and handled any matching event"
+                  onChange={(event) =>
+                    setCheckedCalendar(event.currentTarget.checked)
+                  }
+                />
+              )}
+              {state.kind === "partial" && (
+                <a href={state.eventUrl} target="_blank" rel="noreferrer">
+                  Open event in Google Calendar
+                </a>
+              )}
+            </>
+          )}
+        </FormDialog>
+      )}
+      {state.kind !== "ready" && (
+        <div className="google-calendar-save-status" hidden={open}>
+          <span role="status">{status}</span>
+          {state.kind === "success" ? (
+            <Button
+              minimal
+              icon="cross"
+              aria-label="Dismiss Calendar status"
+              onClick={discard}
+            />
+          ) : (
+            <Button
+              elementRef={reopen}
+              text="Reopen event draft"
+              onClick={() => setOpen(true)}
+            />
+          )}
         </div>
-      </div>
-    </Dialog>
+      )}
+    </>
   );
-};
+});
 
-export default CreateEventDialog;
+export const mountCreateEventDialog = (): Launcher & { unload: () => void } => {
+  const root = document.createElement("div");
+  const ref = React.createRef<Launcher>();
+  document.body.appendChild(root);
+  ReactDOM.render(<CreateEventDialog ref={ref} />, root);
+  return {
+    show: (request) => ref.current?.show(request),
+    unload: () => {
+      ReactDOM.unmountComponentAtNode(root);
+      root.remove();
+    },
+  };
+};
