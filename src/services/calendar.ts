@@ -27,7 +27,9 @@ import startOfDay from "date-fns/startOfDay";
 import endOfDay from "date-fns/endOfDay";
 import addMinutes from "date-fns/addMinutes";
 import getAccessToken from "../utils/getAccessToken";
-import CreateEventDialog from "../components/CreateEventDialog";
+import { mountCreateEventDialog } from "../components/CreateEventDialog";
+import EditEventDialog from "../components/EditEventDialog";
+import type { EventDetails } from "../components/EventFields";
 import renderOverlay from "roamjs-components/util/renderOverlay";
 import { blockFormatEvent, CalenderEvent } from "../utils/event";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
@@ -352,7 +354,9 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
         })
       );
 
-      const addGoogleCalendarEventCommand = () => {
+      const createEventDialog = mountCreateEventDialog();
+      unloads.add(createEventDialog.unload);
+      const addGoogleCalendarEventCommand = async (): Promise<void> => {
         const blockUid =
           window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"] || "";
         const children = blockUid ? getBasicTreeByParentUid(blockUid) : [];
@@ -369,18 +373,16 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
             })
           ),
         };
-        renderOverlay({
-          Overlay: CreateEventDialog,
-          props: {
-            blockUid,
-            description: "",
-            location: "",
-            start: new Date(),
-            end: addMinutes(new Date(), 30),
-            ...props,
-            getCalendarIds,
-          },
-        });
+        const parentUid = blockUid ||
+          (await window.roamAlphaAPI.ui.mainWindow.getOpenPageOrBlockUid()) || "";
+        const details: EventDetails = {
+          description: "",
+          location: "",
+          start: new Date(),
+          end: addMinutes(new Date(), 30),
+          ...props,
+        };
+        createEventDialog.show({ parentUid, details, calendars: getCalendarIds() });
       };
 
       window.roamAlphaAPI.ui.commandPalette.addCommand({
@@ -419,7 +421,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
           ).then((all) => {
             const r = all.find((r) => r);
             return renderOverlay({
-              Overlay: CreateEventDialog,
+              Overlay: EditEventDialog,
               props: {
                 edit: r!.data.id,
                 calendar: r!.calendar,
@@ -429,7 +431,6 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
                 location: r!.data.location,
                 start: new Date(r!.data.start.dateTime),
                 end: new Date(r!.data.end.dateTime),
-                getCalendarIds,
               },
             });
           });
@@ -480,7 +481,7 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
             ).then((all) => {
               const r = all.find((r) => r);
               return renderOverlay({
-                Overlay: CreateEventDialog,
+                Overlay: EditEventDialog,
                 props: {
                   edit: r!.data.id,
                   calendar: r!.calendar,
@@ -490,7 +491,6 @@ const loadGoogleCalendar = (args: OnloadArgs) => {
                   location: r!.data.location,
                   start: new Date(r!.data.start.dateTime),
                   end: new Date(r!.data.end.dateTime),
-                  getCalendarIds,
                 },
               });
             });
